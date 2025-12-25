@@ -1,22 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { QuickActions } from "@/components/QuickActions";
 import { EmptyState } from "@/components/EmptyState";
+import { useDirectorAgent } from "@/hooks/useDirectorAgent";
 import { toast } from "sonner";
 
-interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  timestamp: Date;
-}
-
 const Index = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isConnected] = useState(true);
+  const { messages, isLoading, sendMessage } = useDirectorAgent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -28,28 +20,7 @@ const Index = () => {
   }, [messages]);
 
   const handleSendMessage = async (content: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      role: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
-
-    // Simulate AI response - this will be replaced with actual n8n webhook call
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `I received your message: "${content}"\n\nTo connect me to your n8n Director Agent, you'll need to configure the webhook endpoint. I'll be able to help you with:\n\n• Calendar management across all your accounts\n• Email handling and responses\n• Task tracking and updates\n• Financial summaries\n• Research queries\n• And much more!`,
-        role: "assistant",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, aiResponse]);
-      setIsLoading(false);
-    }, 1500);
+    await sendMessage(content);
   };
 
   const handleQuickAction = (prompt: string) => {
@@ -59,7 +30,7 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen max-h-screen bg-background">
-      <Header isConnected={isConnected} />
+      <Header isConnected={true} />
 
       <main className="flex-1 overflow-hidden flex flex-col">
         {messages.length === 0 ? (

@@ -69,18 +69,36 @@ serve(async (req) => {
     // Parse the response from n8n
     // n8n returns: {"hostAppDataAction":{"chatDataAction":{"createMessageAction":{"message":{"text":"On it."}}}}}
     // The actual response comes later via the completion DM, but we get immediate acknowledgment
-    const n8nResponse = await response.json();
-    console.log(`[Director Agent] n8n response: ${JSON.stringify(n8nResponse)}`);
-
-    // Extract the response text
+    const responseText_raw = await response.text();
+    console.log(`[Director Agent] n8n raw response: ${responseText_raw}`);
+    
+    let n8nResponse: unknown = null;
     let responseText = "Processing your request...";
     
-    if (n8nResponse?.hostAppDataAction?.chatDataAction?.createMessageAction?.message?.text) {
-      responseText = n8nResponse.hostAppDataAction.chatDataAction.createMessageAction.message.text;
-    } else if (n8nResponse?.text) {
-      responseText = n8nResponse.text;
-    } else if (typeof n8nResponse === 'string') {
-      responseText = n8nResponse;
+    // Try to parse as JSON if there's content
+    if (responseText_raw && responseText_raw.trim()) {
+      try {
+        n8nResponse = JSON.parse(responseText_raw);
+        console.log(`[Director Agent] n8n parsed response: ${JSON.stringify(n8nResponse)}`);
+        
+        // Extract the response text from various possible structures
+        const parsed = n8nResponse as { 
+          hostAppDataAction?: { chatDataAction?: { createMessageAction?: { message?: { text?: string } } } };
+          text?: string;
+        };
+        
+        if (parsed?.hostAppDataAction?.chatDataAction?.createMessageAction?.message?.text) {
+          responseText = parsed.hostAppDataAction.chatDataAction.createMessageAction.message.text;
+        } else if (parsed?.text) {
+          responseText = parsed.text;
+        }
+      } catch {
+        // If parsing fails, use the raw text as the response
+        console.log(`[Director Agent] Response is not JSON, using raw text`);
+        responseText = responseText_raw;
+      }
+    } else {
+      console.log(`[Director Agent] Empty response from n8n, using default message`);
     }
 
     return new Response(

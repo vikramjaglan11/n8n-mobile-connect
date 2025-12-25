@@ -1,1 +1,4 @@
 project_id = "zjqvgupwpgkunyoeyhue"
+
+[functions.director-agent]
+verify_jwt = false

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
@@ -12,6 +12,17 @@ export function useDirectorAgent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => `mobile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearTimeout(pollingRef.current);
+      }
+    };
+  }, []);
 
   const sendMessage = useCallback(async (content: string) => {
     // Add user message immediately
@@ -24,6 +35,7 @@ export function useDirectorAgent() {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+    lastMessageIdRef.current = userMessage.id;
 
     try {
       console.log('[useDirectorAgent] Sending message:', content);
@@ -42,9 +54,11 @@ export function useDirectorAgent() {
       }
 
       // Add assistant response
+      const responseContent = data?.response || data?.text || 'I received your message and am processing it.';
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data?.response || 'I received your message and am processing it.',
+        content: responseContent,
         role: 'assistant',
         timestamp: new Date(),
       };
@@ -70,6 +84,7 @@ export function useDirectorAgent() {
 
   const clearMessages = useCallback(() => {
     setMessages([]);
+    lastMessageIdRef.current = null;
   }, []);
 
   return {

@@ -98,8 +98,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 "w-full resize-none bg-muted/50 border border-border rounded-2xl px-4 py-3 pr-12",
                 "text-sm placeholder:text-muted-foreground/60",
                 "focus:outline-none focus:border-primary/30",
-                "transition-all duration-300",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "transition-all duration-300 cursor-text",
+                "disabled:opacity-50",
                 "relative z-10"
               )}
             />

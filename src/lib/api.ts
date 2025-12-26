@@ -1,77 +1,32 @@
-import { supabase } from "@/integrations/supabase/client";
+const API_URL = "https://vikramjaglan11.app.n8n.cloud/webhook/director-agent";
 
-// Edge function endpoints
-export const ENDPOINTS = {
-  DIRECTOR_AGENT: "director-agent",
-  DOMAIN_BRIEFING: "domain-briefing",
-} as const;
-
-// Types
-export interface ApiResponse<T> {
-  data: T | null;
-  error: string | null;
+export interface DirectorResponse {
+  success: boolean;
+  response: string;
+  timestamp: string;
 }
 
-export interface DirectorAgentRequest {
-  message: string;
-  sessionId: string;
-}
-
-export interface DirectorAgentResponse {
-  response?: string;
-  text?: string;
-  error?: string;
-}
-
-export interface DomainBriefingResponse {
-  communications: { items: BriefingItem[]; count: number };
-  calendar: { items: BriefingItem[]; count: number };
-  tasks: { items: BriefingItem[]; count: number };
-  notifications: { items: BriefingItem[]; count: number };
-}
-
-export interface BriefingItem {
-  id: string;
-  title: string;
-  preview?: string;
-  time?: string;
-  priority?: "high" | "medium" | "low";
-}
-
-// API helper functions
-export async function invokeEdgeFunction<T>(
-  functionName: string,
-  body?: Record<string, unknown>
-): Promise<ApiResponse<T>> {
+export async function sendMessage(message: string): Promise<DirectorResponse> {
   try {
-    const { data, error } = await supabase.functions.invoke(functionName, {
-      body,
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message }),
     });
 
-    if (error) {
-      console.error(`Error calling ${functionName}:`, error);
-      return { data: null, error: error.message };
+    if (!response.ok) {
+      throw new Error("Network error");
     }
 
-    return { data: data as T, error: null };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(`Exception calling ${functionName}:`, message);
-    return { data: null, error: message };
+    return await response.json();
+  } catch (error) {
+    console.error("API Error:", error);
+    return {
+      success: false,
+      response: "Sorry, I could not connect. Please try again.",
+      timestamp: new Date().toISOString(),
+    };
   }
-}
-
-// Typed API calls
-export async function sendDirectorMessage(
-  message: string,
-  sessionId: string
-): Promise<ApiResponse<DirectorAgentResponse>> {
-  return invokeEdgeFunction<DirectorAgentResponse>(ENDPOINTS.DIRECTOR_AGENT, {
-    message,
-    sessionId,
-  });
-}
-
-export async function fetchDomainBriefing(): Promise<ApiResponse<DomainBriefingResponse>> {
-  return invokeEdgeFunction<DomainBriefingResponse>(ENDPOINTS.DOMAIN_BRIEFING);
 }

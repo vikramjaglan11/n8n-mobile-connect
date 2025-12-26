@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Menu } from "lucide-react";
 import { VoiceOrb } from "./VoiceOrb";
 import { DomainPanel } from "./DomainPanel";
+import { useDomainBriefing } from "@/hooks/useDomainBriefing";
 
 interface DashboardProps {
   onSendMessage: (message: string) => void;
@@ -11,6 +12,7 @@ interface DashboardProps {
 
 export function Dashboard({ onSendMessage, onInputFocus }: DashboardProps) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const { totalPending, isLoading } = useDomainBriefing();
 
   const handleVoiceTranscript = (text: string) => {
     onSendMessage(text);
@@ -41,10 +43,28 @@ export function Dashboard({ onSendMessage, onInputFocus }: DashboardProps) {
         transition={{ duration: 0.5, delay: 0.3 }}
       >
         <Menu className="w-5 h-5 text-foreground/70" />
-        {/* Notification badge */}
-        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground flex items-center justify-center shadow-md">
-          <span className="text-[10px] text-background font-bold">7</span>
-        </span>
+        {/* Notification badge - shows real count */}
+        {totalPending > 0 && (
+          <motion.span 
+            className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-foreground flex items-center justify-center shadow-md"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+          >
+            <span className="text-[10px] text-background font-bold">
+              {totalPending > 99 ? '99+' : totalPending}
+            </span>
+          </motion.span>
+        )}
+        {/* Loading indicator */}
+        {isLoading && (
+          <motion.div
+            className="absolute inset-0 rounded-xl border-2 border-foreground/20"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            style={{ borderTopColor: 'hsl(var(--foreground))' }}
+          />
+        )}
       </motion.button>
 
       {/* Main content - centered */}

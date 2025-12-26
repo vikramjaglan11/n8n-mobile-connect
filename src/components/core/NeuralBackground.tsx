@@ -28,13 +28,13 @@ export function NeuralBackground() {
 
     const initNodes = () => {
       nodes = [];
-      const nodeCount = Math.floor((canvas.width * canvas.height) / 25000);
+      const nodeCount = Math.floor((canvas.width * canvas.height) / 30000);
       for (let i = 0; i < nodeCount; i++) {
         nodes.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          vx: (Math.random() - 0.5) * 0.3,
-          vy: (Math.random() - 0.5) * 0.3,
+          vx: (Math.random() - 0.5) * 0.2,
+          vy: (Math.random() - 0.5) * 0.2,
           radius: Math.random() * 1.5 + 0.5,
         });
       }
@@ -52,10 +52,10 @@ export function NeuralBackground() {
         if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
         if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
 
-        // Draw node
+        // Draw node - using black/gray for light theme
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(0, 210, 211, 0.3)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
         ctx.fill();
       });
 
@@ -70,8 +70,8 @@ export function NeuralBackground() {
             ctx.beginPath();
             ctx.moveTo(node.x, node.y);
             ctx.lineTo(other.x, other.y);
-            const opacity = (1 - distance / 150) * 0.15;
-            ctx.strokeStyle = `rgba(0, 210, 211, ${opacity})`;
+            const opacity = (1 - distance / 150) * 0.08;
+            ctx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
@@ -96,20 +96,20 @@ export function NeuralBackground() {
       <canvas
         ref={canvasRef}
         className="fixed inset-0 pointer-events-none z-0"
-        style={{ opacity: 0.6 }}
+        style={{ opacity: 0.5 }}
       />
       
-      {/* Gradient overlays */}
+      {/* Subtle gradient overlay */}
       <div className="fixed inset-0 pointer-events-none z-0 gradient-hero" />
       
       {/* Radial gradient from center */}
       <motion.div
         className="fixed inset-0 pointer-events-none z-0"
         style={{
-          background: "radial-gradient(circle at 50% 30%, hsl(185 100% 50% / 0.08) 0%, transparent 50%)",
+          background: "radial-gradient(circle at 50% 30%, hsl(0 0% 0% / 0.02) 0%, transparent 50%)",
         }}
         animate={{
-          opacity: [0.5, 0.8, 0.5],
+          opacity: [0.3, 0.5, 0.3],
         }}
         transition={{
           duration: 4,

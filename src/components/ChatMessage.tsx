@@ -31,18 +31,18 @@ export function ChatMessage({ content, role, timestamp, isLoading }: ChatMessage
         className={cn(
           "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
           isUser
-            ? "bg-secondary border border-border/50"
-            : "bg-gradient-to-br from-primary to-info"
+            ? "bg-muted border border-border"
+            : "bg-foreground"
         )}
         style={!isUser ? {
-          boxShadow: "0 0 20px hsl(185 100% 50% / 0.3)",
+          boxShadow: "0 4px 16px hsl(0 0% 0% / 0.1)",
         } : {}}
         whileHover={{ scale: 1.05 }}
       >
         {isUser ? (
           <User className="w-4 h-4 text-muted-foreground" />
         ) : (
-          <Activity className="w-4 h-4 text-primary-foreground" />
+          <Activity className="w-4 h-4 text-background" />
         )}
       </motion.div>
 
@@ -57,14 +57,12 @@ export function ChatMessage({ content, role, timestamp, isLoading }: ChatMessage
           className={cn(
             "rounded-2xl px-4 py-3 text-sm leading-relaxed",
             isUser
-              ? "bg-primary text-primary-foreground rounded-tr-sm"
-              : "glass rounded-tl-sm"
+              ? "bg-foreground text-background rounded-tr-sm"
+              : "bg-card border border-border rounded-tl-sm"
           )}
-          style={!isUser ? {
-            background: "linear-gradient(135deg, hsl(230 25% 10% / 0.8) 0%, hsl(230 25% 7% / 0.9) 100%)",
-          } : {
-            boxShadow: "0 4px 20px hsl(185 100% 50% / 0.2)",
-          }}
+          style={isUser ? {
+            boxShadow: "0 4px 16px hsl(0 0% 0% / 0.1)",
+          } : {}}
           whileHover={{ scale: 1.01 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
         >
@@ -73,10 +71,10 @@ export function ChatMessage({ content, role, timestamp, isLoading }: ChatMessage
               {[0, 1, 2].map((i) => (
                 <motion.span
                   key={i}
-                  className="w-2 h-2 bg-primary rounded-full"
+                  className="w-2 h-2 bg-foreground rounded-full"
                   animate={{
                     y: [0, -6, 0],
-                    opacity: [0.5, 1, 0.5],
+                    opacity: [0.3, 0.8, 0.3],
                   }}
                   transition={{
                     duration: 0.6,

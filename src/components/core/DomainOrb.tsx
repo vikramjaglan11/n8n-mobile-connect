@@ -10,51 +10,57 @@ interface DomainOrbProps {
   isActive?: boolean;
 }
 
-const colorMap: Record<string, { bg: string; glow: string; border: string }> = {
+const colorMap: Record<string, { bg: string; glow: string; border: string; accent: string }> = {
   calendar: {
-    bg: "from-cyan-500/20 to-cyan-600/10",
-    glow: "shadow-[0_0_30px_hsl(185_100%_50%/0.4)]",
-    border: "border-cyan-500/30",
+    bg: "from-blue-100 to-blue-50",
+    glow: "shadow-[0_4px_20px_hsl(220_70%_50%/0.25)]",
+    border: "border-blue-200",
+    accent: "bg-blue-500",
   },
   email: {
-    bg: "from-amber-500/20 to-amber-600/10",
-    glow: "shadow-[0_0_30px_hsl(45_100%_55%/0.4)]",
-    border: "border-amber-500/30",
+    bg: "from-amber-100 to-amber-50",
+    glow: "shadow-[0_4px_20px_hsl(40_80%_55%/0.25)]",
+    border: "border-amber-200",
+    accent: "bg-amber-500",
   },
   tasks: {
-    bg: "from-emerald-500/20 to-emerald-600/10",
-    glow: "shadow-[0_0_30px_hsl(145_80%_45%/0.4)]",
-    border: "border-emerald-500/30",
+    bg: "from-emerald-100 to-emerald-50",
+    glow: "shadow-[0_4px_20px_hsl(145_60%_42%/0.25)]",
+    border: "border-emerald-200",
+    accent: "bg-emerald-500",
   },
   finance: {
-    bg: "from-violet-500/20 to-violet-600/10",
-    glow: "shadow-[0_0_30px_hsl(280_100%_65%/0.4)]",
-    border: "border-violet-500/30",
+    bg: "from-violet-100 to-violet-50",
+    glow: "shadow-[0_4px_20px_hsl(260_60%_55%/0.25)]",
+    border: "border-violet-200",
+    accent: "bg-violet-500",
   },
   research: {
-    bg: "from-pink-500/20 to-pink-600/10",
-    glow: "shadow-[0_0_30px_hsl(320_100%_60%/0.4)]",
-    border: "border-pink-500/30",
+    bg: "from-pink-100 to-pink-50",
+    glow: "shadow-[0_4px_20px_hsl(320_60%_55%/0.25)]",
+    border: "border-pink-200",
+    accent: "bg-pink-500",
   },
   network: {
-    bg: "from-blue-500/20 to-blue-600/10",
-    glow: "shadow-[0_0_30px_hsl(200_100%_55%/0.4)]",
-    border: "border-blue-500/30",
+    bg: "from-sky-100 to-sky-50",
+    glow: "shadow-[0_4px_20px_hsl(195_70%_48%/0.25)]",
+    border: "border-sky-200",
+    accent: "bg-sky-500",
   },
 };
 
 const iconColorMap: Record<string, string> = {
-  calendar: "text-cyan-400",
-  email: "text-amber-400",
-  tasks: "text-emerald-400",
-  finance: "text-violet-400",
-  research: "text-pink-400",
-  network: "text-blue-400",
+  calendar: "text-blue-600",
+  email: "text-amber-600",
+  tasks: "text-emerald-600",
+  finance: "text-violet-600",
+  research: "text-pink-600",
+  network: "text-sky-600",
 };
 
 export function DomainOrb({ icon: Icon, label, color, onClick, delay = 0, isActive = false }: DomainOrbProps) {
   const colors = colorMap[color] || colorMap.calendar;
-  const iconColor = iconColorMap[color] || "text-primary";
+  const iconColor = iconColorMap[color] || "text-foreground";
 
   return (
     <motion.button
@@ -75,12 +81,12 @@ export function DomainOrb({ icon: Icon, label, color, onClick, delay = 0, isActi
       <motion.div
         className={`absolute inset-0 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
         style={{
-          background: `radial-gradient(circle, ${color === 'calendar' ? 'hsl(185 100% 50% / 0.3)' : 
-            color === 'email' ? 'hsl(45 100% 55% / 0.3)' :
-            color === 'tasks' ? 'hsl(145 80% 45% / 0.3)' :
-            color === 'finance' ? 'hsl(280 100% 65% / 0.3)' :
-            color === 'research' ? 'hsl(320 100% 60% / 0.3)' :
-            'hsl(200 100% 55% / 0.3)'} 0%, transparent 70%)`,
+          background: `radial-gradient(circle, ${color === 'calendar' ? 'hsl(220 70% 50% / 0.15)' : 
+            color === 'email' ? 'hsl(40 80% 55% / 0.15)' :
+            color === 'tasks' ? 'hsl(145 60% 42% / 0.15)' :
+            color === 'finance' ? 'hsl(260 60% 55% / 0.15)' :
+            color === 'research' ? 'hsl(320 60% 55% / 0.15)' :
+            'hsl(195 70% 48% / 0.15)'} 0%, transparent 70%)`,
         }}
       />
 
@@ -94,7 +100,7 @@ export function DomainOrb({ icon: Icon, label, color, onClick, delay = 0, isActi
           flex items-center justify-center
           transition-all duration-300
           group-hover:${colors.glow}
-          ${isActive ? colors.glow : ""}
+          ${isActive ? colors.glow : "shadow-sm"}
         `}
       >
         {/* Active pulse */}
@@ -111,7 +117,7 @@ export function DomainOrb({ icon: Icon, label, color, onClick, delay = 0, isActi
       </div>
 
       {/* Label */}
-      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-300 font-medium">
         {label}
       </span>
     </motion.button>

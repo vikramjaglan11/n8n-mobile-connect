@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface BriefingItem {
@@ -35,15 +35,32 @@ export function useDomainBriefing() {
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
-  const fetchBriefing = useCallback(async () => {
+  // Prevent multiple simultaneous fetches and auto-fetch loops
+  const isFetchingRef = useRef(false);
+  const hasFetchedRef = useRef(false);
+
+  const fetchBriefing = useCallback(async (force: boolean = false) => {
+    // Prevent duplicate calls and auto-refresh loops
+    if (isFetchingRef.current) {
+      console.log("[useDomainBriefing] Already fetching, skipping...");
+      return;
+    }
+
+    // Only auto-fetch once unless forced
+    if (hasFetchedRef.current && !force) {
+      console.log("[useDomainBriefing] Already fetched, use refetch() to refresh");
+      return;
+    }
+
+    isFetchingRef.current = true;
     setIsLoading(true);
     setError(null);
 
     try {
       console.log("[useDomainBriefing] Fetching briefing data...");
-      
-      const { data, error: fnError } = await supabase.functions.invoke('domain-briefing', {
-        body: { domain: 'all' }
+
+      const { data, error: fnError } = await supabase.functions.invoke("domain-briefing", {
+        body: { domain: "all" },
       });
 
       if (fnError) {
@@ -54,26 +71,25 @@ export function useDomainBriefing() {
         console.log("[useDomainBriefing] Received briefing data:", data.data);
         setBriefing(data.data);
         setLastFetched(new Date());
+        hasFetchedRef.current = true;
       } else if (data?.data) {
-        // Even on error, we might have fallback data
         setBriefing(data.data);
         setLastFetched(new Date());
+        hasFetchedRef.current = true;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch briefing';
+      const message = err instanceof Error ? err.message : "Failed to fetch briefing";
       console.error("[useDomainBriefing] Error:", message);
       setError(message);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 
-  // Fetch on mount
-  useEffect(() => {
-    fetchBriefing();
-  }, [fetchBriefing]);
+  // NO AUTO-FETCH ON MOUNT - User must click refresh button
+  // This prevents the infinite loop that was costing $40+
 
-  // Calculate total pending items
   const totalPending = Object.values(briefing).reduce((sum, domain) => sum + domain.count, 0);
 
   return {
@@ -82,6 +98,7 @@ export function useDomainBriefing() {
     error,
     lastFetched,
     totalPending,
-    refetch: fetchBriefing,
+    refetch: () => fetchBriefing(true), // Force refresh when user clicks
+    initialFetch: () => fetchBriefing(false), // For manual initial load
   };
 }

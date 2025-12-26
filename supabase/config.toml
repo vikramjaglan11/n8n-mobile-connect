@@ -2,3 +2,6 @@ project_id = "zjqvgupwpgkunyoeyhue"
 
 [functions.director-agent]
 verify_jwt = false
+
+[functions.domain-briefing]
+verify_jwt = false

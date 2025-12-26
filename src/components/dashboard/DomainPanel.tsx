@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -10,19 +10,21 @@ import {
   X,
   LucideIcon,
   ChevronRight,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
+import { useDomainBriefing } from "@/hooks/useDomainBriefing";
 
 interface BriefingItem {
-  id: string;
   text: string;
   urgent?: boolean;
 }
 
-interface Domain {
+interface DomainConfig {
   id: string;
   icon: LucideIcon;
   label: string;
-  briefing: BriefingItem[];
+  prompt: string;
 }
 
 interface DomainPanelProps {
@@ -31,86 +33,63 @@ interface DomainPanelProps {
   onSelectDomain: (prompt: string) => void;
 }
 
-const domains: Domain[] = [
+const domainConfigs: DomainConfig[] = [
   {
     id: "communications",
     icon: Mail,
     label: "Communications",
-    briefing: [
-      { id: "1", text: "5 messages need your response", urgent: true },
-      { id: "2", text: "John wants to schedule a call" },
-      { id: "3", text: "New partnership inquiry pending" },
-    ],
+    prompt: "Show me messages that need my attention",
   },
   {
     id: "calendar",
     icon: Calendar,
     label: "Calendar",
-    briefing: [
-      { id: "1", text: "Team standup in 30 minutes", urgent: true },
-      { id: "2", text: "3 meetings today" },
-      { id: "3", text: "Dinner plans at 7pm" },
-    ],
+    prompt: "What's on my schedule today?",
   },
   {
     id: "tasks",
     icon: CheckSquare,
     label: "Tasks",
-    briefing: [
-      { id: "1", text: "8 tasks pending", urgent: true },
-      { id: "2", text: "Q4 budget review due today" },
-      { id: "3", text: "2 follow-ups overdue" },
-    ],
+    prompt: "What tasks should I focus on?",
   },
   {
     id: "finance",
     icon: TrendingUp,
     label: "Finance",
-    briefing: [
-      { id: "1", text: "Monthly expenses under budget" },
-      { id: "2", text: "Invoice pending payment" },
-    ],
+    prompt: "Give me a financial overview",
   },
   {
     id: "research",
     icon: Search,
     label: "Research",
-    briefing: [
-      { id: "1", text: "No active research tasks" },
-    ],
+    prompt: "I need to research something",
   },
   {
     id: "network",
     icon: Users,
     label: "Network",
-    briefing: [
-      { id: "1", text: "4 follow-ups suggested" },
-      { id: "2", text: "Sarah's birthday in 3 days" },
-    ],
+    prompt: "Who should I follow up with?",
   },
 ];
 
-const domainPrompts: Record<string, string> = {
-  communications: "Show me messages that need my attention",
-  calendar: "What's on my schedule today?",
-  tasks: "What tasks should I focus on?",
-  finance: "Give me a financial overview",
-  research: "I need to research something",
-  network: "Who should I follow up with?",
-};
-
 function DomainCard({ 
-  domain, 
+  config,
+  items,
+  count,
   onSelect, 
-  index 
+  index,
+  isLoading,
 }: { 
-  domain: Domain; 
+  config: DomainConfig;
+  items: BriefingItem[];
+  count: number;
   onSelect: () => void;
   index: number;
+  isLoading: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const Icon = domain.icon;
-  const hasUrgent = domain.briefing.some(b => b.urgent);
+  const Icon = config.icon;
+  const hasUrgent = items.some(b => b.urgent);
 
   return (
     <motion.div
@@ -119,7 +98,7 @@ function DomainCard({
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
-      {/* Card header - always visible */}
+      {/* Card header */}
       <motion.button
         className="w-full flex items-center gap-4 p-4 rounded-xl bg-background border border-border/50 hover:border-foreground/20 transition-all duration-200"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -129,10 +108,14 @@ function DomainCard({
         {/* Icon */}
         <div className="relative">
           <div className="w-10 h-10 rounded-xl bg-foreground/5 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-foreground/70" />
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 text-foreground/50 animate-spin" />
+            ) : (
+              <Icon className="w-5 h-5 text-foreground/70" />
+            )}
           </div>
           {/* Activity indicator */}
-          {hasUrgent && (
+          {hasUrgent && !isLoading && (
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-foreground">
               <span className="absolute inset-0 rounded-full bg-foreground animate-ping opacity-75" />
             </span>
@@ -141,11 +124,18 @@ function DomainCard({
 
         {/* Label */}
         <div className="flex-1 text-left">
-          <h3 className="font-medium text-foreground">{domain.label}</h3>
+          <h3 className="font-medium text-foreground">{config.label}</h3>
           <p className="text-xs text-muted-foreground">
-            {domain.briefing.length} items
+            {isLoading ? "Loading..." : `${count} items`}
           </p>
         </div>
+
+        {/* Count badge */}
+        {count > 0 && !isLoading && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-foreground/10 text-foreground">
+            {count}
+          </span>
+        )}
 
         {/* Chevron */}
         <motion.div
@@ -167,22 +157,26 @@ function DomainCard({
             className="overflow-hidden"
           >
             <div className="pt-2 pl-14 pr-4 pb-2 space-y-2">
-              {domain.briefing.map((item, i) => (
-                <motion.div
-                  key={item.id}
-                  className="flex items-start gap-2 text-sm"
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                    item.urgent ? "bg-foreground" : "bg-foreground/30"
-                  }`} />
-                  <span className={item.urgent ? "text-foreground font-medium" : "text-muted-foreground"}>
-                    {item.text}
-                  </span>
-                </motion.div>
-              ))}
+              {items.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No items to show</p>
+              ) : (
+                items.slice(0, 3).map((item, i) => (
+                  <motion.div
+                    key={i}
+                    className="flex items-start gap-2 text-sm"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                      item.urgent ? "bg-foreground" : "bg-foreground/30"
+                    }`} />
+                    <span className={item.urgent ? "text-foreground font-medium" : "text-muted-foreground"}>
+                      {item.text}
+                    </span>
+                  </motion.div>
+                ))
+              )}
               
               {/* Open domain button */}
               <motion.button
@@ -193,7 +187,7 @@ function DomainCard({
                 }}
                 whileHover={{ x: 4 }}
               >
-                Open {domain.label}
+                Open {config.label}
                 <ChevronRight className="w-3 h-3" />
               </motion.button>
             </div>
@@ -205,6 +199,17 @@ function DomainCard({
 }
 
 export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProps) {
+  const { briefing, isLoading, lastFetched, totalPending, refetch } = useDomainBriefing();
+
+  // Format last fetched time
+  const getLastFetchedText = () => {
+    if (!lastFetched) return "Never";
+    const diff = Math.floor((Date.now() - lastFetched.getTime()) / 1000);
+    if (diff < 60) return "Just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -230,39 +235,59 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
                 <h2 className="font-semibold text-foreground">Domains</h2>
-                <p className="text-xs text-muted-foreground">Your workflows at a glance</p>
+                <p className="text-xs text-muted-foreground">
+                  {isLoading ? "Fetching latest..." : `${totalPending} items across workflows`}
+                </p>
               </div>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 rounded-lg hover:bg-foreground/5 flex items-center justify-center transition-colors"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={refetch}
+                  disabled={isLoading}
+                  className="w-8 h-8 rounded-lg hover:bg-foreground/5 flex items-center justify-center transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-lg hover:bg-foreground/5 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
             </div>
 
             {/* Domain list */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {domains.map((domain, index) => (
-                <DomainCard
-                  key={domain.id}
-                  domain={domain}
-                  index={index}
-                  onSelect={() => {
-                    onSelectDomain(domainPrompts[domain.id]);
-                    onClose();
-                  }}
-                />
-              ))}
+              {domainConfigs.map((config, index) => {
+                const domainData = briefing[config.id as keyof typeof briefing] || { items: [], count: 0 };
+                return (
+                  <DomainCard
+                    key={config.id}
+                    config={config}
+                    items={domainData.items}
+                    count={domainData.count}
+                    index={index}
+                    isLoading={isLoading}
+                    onSelect={() => {
+                      onSelectDomain(config.prompt);
+                      onClose();
+                    }}
+                  />
+                );
+              })}
             </div>
 
             {/* Footer */}
             <div className="p-4 border-t border-border">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-foreground" />
-                </span>
-                <span>Last sync 1 minute ago</span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-foreground" />
+                  </span>
+                  <span>Connected to Director</span>
+                </div>
+                <span>Updated {getLastFetchedText()}</span>
               </div>
             </div>
           </motion.div>

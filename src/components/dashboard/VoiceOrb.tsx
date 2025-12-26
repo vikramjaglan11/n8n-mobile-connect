@@ -11,12 +11,14 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(12).fill(0));
+  const [idlePhase, setIdlePhase] = useState(0);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const animationRef = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
+  const idleAnimationRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
@@ -27,9 +29,33 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
     };
   }, []);
 
+  // Continuous idle animation for living effect
+  useEffect(() => {
+    if (!isListening) {
+      const animateIdle = () => {
+        setIdlePhase(Date.now() * 0.001);
+        idleAnimationRef.current = requestAnimationFrame(animateIdle);
+      };
+      animateIdle();
+    } else {
+      if (idleAnimationRef.current) {
+        cancelAnimationFrame(idleAnimationRef.current);
+      }
+    }
+
+    return () => {
+      if (idleAnimationRef.current) {
+        cancelAnimationFrame(idleAnimationRef.current);
+      }
+    };
+  }, [isListening]);
+
   const cleanup = () => {
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
+    }
+    if (idleAnimationRef.current) {
+      cancelAnimationFrame(idleAnimationRef.current);
     }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
@@ -59,7 +85,6 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
 
         analyserRef.current.getByteFrequencyData(dataArray);
         
-        // Create organic, flowing levels
         const levels: number[] = [];
         const segmentSize = Math.floor(dataArray.length / 12);
         
@@ -69,7 +94,6 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
             sum += dataArray[i * segmentSize + j];
           }
           const avg = sum / segmentSize / 255;
-          // Add some organic variation
           const time = Date.now() * 0.002;
           const variation = Math.sin(time + i * 0.5) * 0.1;
           levels.push(Math.min(1, Math.max(0.1, avg + variation)));
@@ -137,21 +161,57 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
   // Calculate average audio level for outer effects
   const avgLevel = audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length;
 
+  // Idle animation values - organic, flowing movement
+  const idleScale1 = 1 + Math.sin(idlePhase * 0.8) * 0.03 + Math.sin(idlePhase * 1.3) * 0.02;
+  const idleScale2 = 1 + Math.sin(idlePhase * 0.6 + 1) * 0.025 + Math.cos(idlePhase * 1.1) * 0.02;
+  const idleScale3 = 1 + Math.sin(idlePhase * 0.5 + 2) * 0.02 + Math.sin(idlePhase * 0.9) * 0.015;
+  const idleOpacity1 = 0.15 + Math.sin(idlePhase * 0.7) * 0.1;
+  const idleOpacity2 = 0.1 + Math.sin(idlePhase * 0.5 + 0.5) * 0.08;
+  const idleGlow = 0.04 + Math.sin(idlePhase * 0.4) * 0.02;
+
   return (
     <div className="relative flex items-center justify-center">
-      {/* Outer ambient glow - responds to audio */}
+      {/* Outer ambient glow - always breathing */}
       <motion.div
         className="absolute w-48 h-48 rounded-full pointer-events-none"
         style={{
-          background: `radial-gradient(circle, hsl(var(--foreground) / ${isListening ? 0.08 + avgLevel * 0.15 : 0.03}) 0%, transparent 70%)`,
+          background: `radial-gradient(circle, hsl(var(--foreground) / ${isListening ? 0.08 + avgLevel * 0.15 : idleGlow}) 0%, transparent 70%)`,
         }}
         animate={{
-          scale: isListening ? 1 + avgLevel * 0.2 : 1,
+          scale: isListening ? 1 + avgLevel * 0.2 : idleScale1,
         }}
         transition={{ type: "spring", stiffness: 100, damping: 15 }}
       />
 
-      {/* Audio visualization rings */}
+      {/* Flowing ambient particles when idle */}
+      {!isListening && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {[...Array(8)].map((_, i) => {
+            const angle = (i / 8) * Math.PI * 2 + idlePhase * 0.2;
+            const radius = 45 + Math.sin(idlePhase + i) * 8;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            const size = 2 + Math.sin(idlePhase * 0.8 + i * 0.5) * 1;
+            const opacity = 0.08 + Math.sin(idlePhase * 0.6 + i * 0.7) * 0.06;
+            
+            return (
+              <motion.div
+                key={i}
+                className="absolute rounded-full bg-foreground"
+                style={{
+                  width: size,
+                  height: size,
+                  x,
+                  y,
+                  opacity,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Audio visualization rings when listening */}
       <AnimatePresence>
         {isListening && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -183,42 +243,30 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
         )}
       </AnimatePresence>
 
-      {/* Breathing outer ring */}
+      {/* Breathing outer ring - always animated */}
       <motion.div
         className="absolute w-32 h-32 rounded-full"
         style={{
-          border: `1px solid hsl(var(--foreground) / ${isListening ? 0.15 + avgLevel * 0.2 : 0.08})`,
-        }}
-        animate={{
-          scale: isListening ? 1 + avgLevel * 0.15 : [1, 1.02, 1],
-          opacity: isListening ? 0.5 + avgLevel * 0.5 : [0.3, 0.5, 0.3],
-        }}
-        transition={{
-          type: isListening ? "spring" : "tween",
-          stiffness: 100,
-          damping: 15,
-          duration: isListening ? undefined : 3,
-          repeat: isListening ? 0 : Infinity,
+          border: `1px solid hsl(var(--foreground) / ${isListening ? 0.15 + avgLevel * 0.2 : idleOpacity1})`,
+          transform: `scale(${isListening ? 1 + avgLevel * 0.15 : idleScale2})`,
         }}
       />
 
-      {/* Secondary ring */}
+      {/* Secondary ring - always animated */}
       <motion.div
         className="absolute w-28 h-28 rounded-full"
         style={{
-          border: `1px solid hsl(var(--foreground) / ${isListening ? 0.1 + avgLevel * 0.15 : 0.05})`,
+          border: `1px solid hsl(var(--foreground) / ${isListening ? 0.1 + avgLevel * 0.15 : idleOpacity2})`,
+          transform: `scale(${isListening ? 1 + avgLevel * 0.1 : idleScale3})`,
         }}
-        animate={{
-          scale: isListening ? 1 + avgLevel * 0.1 : [1, 1.01, 1],
-          opacity: [0.2, 0.4, 0.2],
-        }}
-        transition={{
-          type: isListening ? "spring" : "tween",
-          stiffness: 120,
-          damping: 20,
-          duration: isListening ? undefined : 4,
-          repeat: isListening ? 0 : Infinity,
-          delay: 0.3,
+      />
+
+      {/* Third ring for more depth */}
+      <motion.div
+        className="absolute w-36 h-36 rounded-full pointer-events-none"
+        style={{
+          border: `1px solid hsl(var(--foreground) / ${isListening ? 0.08 : 0.03 + Math.sin(idlePhase * 0.3) * 0.02})`,
+          transform: `scale(${isListening ? 1 + avgLevel * 0.2 : 1 + Math.sin(idlePhase * 0.4 + 1.5) * 0.02})`,
         }}
       />
 
@@ -229,51 +277,57 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
         }`}
         onClick={startListening}
         disabled={disabled || isListening}
-        animate={{
-          scale: isListening ? 1 + avgLevel * 0.08 : 1,
+        style={{
+          transform: `scale(${isListening ? 1 + avgLevel * 0.08 : idleScale1})`,
         }}
         whileHover={!disabled && !isListening ? { scale: 1.08 } : {}}
         whileTap={!disabled && !isListening ? { scale: 0.95 } : {}}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
       >
-        {/* 3D glass base - multiple layers for depth */}
-        <div 
+        {/* 3D glass base with dynamic gradient */}
+        <motion.div 
           className="absolute inset-0 rounded-full"
           style={{
             background: `
-              linear-gradient(135deg, 
-                hsl(var(--foreground) / 0.08) 0%, 
+              linear-gradient(${135 + Math.sin(idlePhase * 0.3) * 15}deg, 
+                hsl(var(--foreground) / ${0.06 + Math.sin(idlePhase * 0.5) * 0.02}) 0%, 
                 hsl(var(--foreground) / 0.03) 50%, 
-                hsl(var(--foreground) / 0.06) 100%
+                hsl(var(--foreground) / ${0.05 + Math.cos(idlePhase * 0.4) * 0.02}) 100%
               )
             `,
             boxShadow: `
-              inset 0 2px 20px hsl(var(--foreground) / 0.05),
+              inset 0 2px 20px hsl(var(--foreground) / ${0.04 + Math.sin(idlePhase * 0.6) * 0.02}),
               inset 0 -4px 15px hsl(var(--foreground) / 0.03),
-              0 10px 40px -10px hsl(var(--foreground) / 0.15),
+              0 10px 40px -10px hsl(var(--foreground) / ${0.1 + Math.sin(idlePhase * 0.5) * 0.05}),
               0 2px 8px hsl(var(--foreground) / 0.08)
             `,
-            border: `1px solid hsl(var(--foreground) / 0.12)`,
+            border: `1px solid hsl(var(--foreground) / ${0.1 + Math.sin(idlePhase * 0.7) * 0.04})`,
           }}
         />
 
-        {/* Inner highlight - creates 3D sphere illusion */}
+        {/* Inner highlight - orbiting light effect */}
         <motion.div
-          className="absolute inset-2 rounded-full"
+          className="absolute inset-2 rounded-full pointer-events-none"
           style={{
             background: `
-              radial-gradient(ellipse 80% 50% at 30% 20%, 
-                hsl(var(--foreground) / 0.12) 0%, 
+              radial-gradient(ellipse 70% 40% at ${30 + Math.sin(idlePhase * 0.4) * 10}% ${20 + Math.cos(idlePhase * 0.5) * 8}%, 
+                hsl(var(--foreground) / ${isListening ? 0.15 : 0.1 + Math.sin(idlePhase * 0.6) * 0.04}) 0%, 
                 transparent 60%
               )
             `,
           }}
-          animate={{
-            opacity: isListening ? [0.6, 1, 0.6] : 0.8,
-          }}
-          transition={{
-            duration: 1,
-            repeat: isListening ? Infinity : 0,
+        />
+
+        {/* Secondary moving highlight */}
+        <motion.div
+          className="absolute inset-3 rounded-full pointer-events-none"
+          style={{
+            background: `
+              radial-gradient(ellipse 50% 30% at ${70 + Math.cos(idlePhase * 0.3) * 10}% ${75 + Math.sin(idlePhase * 0.4) * 8}%, 
+                hsl(var(--foreground) / ${0.05 + Math.sin(idlePhase * 0.5) * 0.02}) 0%, 
+                transparent 50%
+              )
+            `,
           }}
         />
 
@@ -281,24 +335,7 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
         <motion.div
           className="absolute inset-3 rounded-full"
           style={{
-            background: `radial-gradient(circle, hsl(var(--foreground) / ${isListening ? avgLevel * 0.2 : 0}) 0%, transparent 70%)`,
-          }}
-          animate={{
-            scale: isListening ? 1 + avgLevel * 0.3 : 1,
-          }}
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        />
-
-        {/* Subtle rim lighting */}
-        <div 
-          className="absolute inset-0 rounded-full"
-          style={{
-            background: `
-              linear-gradient(180deg, 
-                transparent 40%, 
-                hsl(var(--foreground) / 0.04) 100%
-              )
-            `,
+            background: `radial-gradient(circle, hsl(var(--foreground) / ${isListening ? avgLevel * 0.2 : 0.02 + Math.sin(idlePhase * 0.8) * 0.01}) 0%, transparent 70%)`,
           }}
         />
 
@@ -328,11 +365,10 @@ export function VoiceOrb({ onTranscript, disabled }: VoiceOrbProps) {
         {/* Icon */}
         <motion.div
           className="relative z-10"
-          animate={{
-            scale: isListening ? 1 + avgLevel * 0.15 : 1,
-            opacity: isListening ? 0.7 + avgLevel * 0.3 : 0.7,
+          style={{
+            transform: `scale(${isListening ? 1 + avgLevel * 0.15 : 1 + Math.sin(idlePhase * 0.5) * 0.03})`,
+            opacity: isListening ? 0.7 + avgLevel * 0.3 : 0.6 + Math.sin(idlePhase * 0.4) * 0.1,
           }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <Mic className="w-7 h-7 text-foreground" />
         </motion.div>

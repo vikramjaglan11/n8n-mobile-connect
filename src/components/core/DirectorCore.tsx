@@ -10,7 +10,7 @@ export function DirectorCore({ isActive = true, isProcessing = false }: Director
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([]);
 
   useEffect(() => {
-    const newParticles = Array.from({ length: 20 }, (_, i) => ({
+    const newParticles = Array.from({ length: 16 }, (_, i) => ({
       id: i,
       x: Math.random() * 100 - 50,
       y: Math.random() * 100 - 50,
@@ -25,11 +25,11 @@ export function DirectorCore({ isActive = true, isProcessing = false }: Director
       <motion.div
         className="absolute inset-0 rounded-full"
         style={{
-          background: "radial-gradient(circle, hsl(185 100% 50% / 0.1) 0%, transparent 70%)",
+          background: "radial-gradient(circle, hsl(0 0% 0% / 0.04) 0%, transparent 70%)",
         }}
         animate={{
           scale: isProcessing ? [1, 1.2, 1] : [1, 1.05, 1],
-          opacity: [0.5, 0.8, 0.5],
+          opacity: [0.4, 0.6, 0.4],
         }}
         transition={{
           duration: isProcessing ? 1 : 3,
@@ -40,24 +40,24 @@ export function DirectorCore({ isActive = true, isProcessing = false }: Director
 
       {/* Orbital rings */}
       <motion.div
-        className="absolute w-48 h-48 rounded-full border border-primary/20"
+        className="absolute w-48 h-48 rounded-full border border-foreground/10"
         animate={{ rotate: 360 }}
         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
       >
         <motion.div
-          className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary"
-          style={{ boxShadow: "0 0 20px hsl(185 100% 50% / 0.8)" }}
+          className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-foreground"
+          style={{ boxShadow: "0 4px 12px hsl(0 0% 0% / 0.2)" }}
         />
       </motion.div>
 
       <motion.div
-        className="absolute w-56 h-56 rounded-full border border-accent/10"
+        className="absolute w-56 h-56 rounded-full border border-muted-foreground/10"
         animate={{ rotate: -360 }}
         transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
       >
         <motion.div
-          className="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-2 rounded-full bg-accent/80"
-          style={{ boxShadow: "0 0 15px hsl(280 100% 65% / 0.6)" }}
+          className="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-2 rounded-full bg-muted-foreground/60"
+          style={{ boxShadow: "0 4px 8px hsl(0 0% 0% / 0.15)" }}
         />
       </motion.div>
 
@@ -65,12 +65,12 @@ export function DirectorCore({ isActive = true, isProcessing = false }: Director
       {particles.map((particle) => (
         <motion.div
           key={particle.id}
-          className="absolute w-1 h-1 rounded-full bg-primary/60"
+          className="absolute w-1 h-1 rounded-full bg-foreground/40"
           initial={{ x: 0, y: 0, opacity: 0 }}
           animate={{
             x: [0, particle.x, particle.x * 0.5, 0],
             y: [0, particle.y, particle.y * 1.5, 0],
-            opacity: [0, 0.8, 0.4, 0],
+            opacity: [0, 0.6, 0.3, 0],
             scale: [0, 1, 0.5, 0],
           }}
           transition={{
@@ -78,9 +78,6 @@ export function DirectorCore({ isActive = true, isProcessing = false }: Director
             repeat: Infinity,
             delay: particle.delay,
             ease: "easeInOut",
-          }}
-          style={{
-            boxShadow: "0 0 6px hsl(185 100% 50% / 0.5)",
           }}
         />
       ))}
@@ -97,31 +94,31 @@ export function DirectorCore({ isActive = true, isProcessing = false }: Director
           ease: "easeInOut",
         }}
       >
-        {/* Core gradient */}
+        {/* Core gradient - black/charcoal for light theme */}
         <div
           className="absolute inset-0 rounded-full"
           style={{
             background: `
               radial-gradient(circle at 35% 35%, 
-                hsl(185 100% 75% / 0.9) 0%, 
-                hsl(185 100% 50%) 30%, 
-                hsl(200 100% 40%) 60%,
-                hsl(230 60% 25%) 100%
+                hsl(0 0% 50%) 0%, 
+                hsl(0 0% 25%) 30%, 
+                hsl(0 0% 12%) 60%,
+                hsl(0 0% 5%) 100%
               )
             `,
             boxShadow: isActive
               ? `
-                0 0 60px hsl(185 100% 50% / 0.5),
-                0 0 120px hsl(185 100% 50% / 0.3),
-                inset 0 0 40px hsl(185 100% 30% / 0.5)
+                0 8px 40px hsl(0 0% 0% / 0.15),
+                0 16px 80px hsl(0 0% 0% / 0.1),
+                inset 0 0 30px hsl(0 0% 100% / 0.1)
               `
-              : "none",
+              : "0 4px 20px hsl(0 0% 0% / 0.1)",
           }}
         />
 
         {/* Inner highlight */}
         <div
-          className="absolute top-3 left-4 w-8 h-6 rounded-full opacity-40"
+          className="absolute top-3 left-4 w-8 h-6 rounded-full opacity-50"
           style={{
             background: "linear-gradient(180deg, white 0%, transparent 100%)",
             filter: "blur(4px)",
@@ -131,7 +128,7 @@ export function DirectorCore({ isActive = true, isProcessing = false }: Director
         {/* Pulse ring when processing */}
         {isProcessing && (
           <motion.div
-            className="absolute inset-0 rounded-full border-2 border-primary"
+            className="absolute inset-0 rounded-full border-2 border-foreground/30"
             initial={{ scale: 1, opacity: 1 }}
             animate={{ scale: 2, opacity: 0 }}
             transition={{ duration: 1, repeat: Infinity }}
@@ -152,18 +149,18 @@ export function DirectorCore({ isActive = true, isProcessing = false }: Director
               y1="128"
               x2={x2}
               y2={y2}
-              stroke="url(#lineGradient)"
+              stroke="url(#lineGradientLight)"
               strokeWidth="1"
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.3 }}
+              animate={{ pathLength: 1, opacity: 0.2 }}
               transition={{ duration: 1.5, delay: i * 0.1 }}
             />
           );
         })}
         <defs>
-          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="hsl(185 100% 50%)" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="hsl(185 100% 50%)" stopOpacity="0" />
+          <linearGradient id="lineGradientLight" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="hsl(0 0% 0%)" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="hsl(0 0% 0%)" stopOpacity="0" />
           </linearGradient>
         </defs>
       </svg>

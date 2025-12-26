@@ -52,7 +52,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
               exit={{ scale: 0, opacity: 0 }}
               className="flex-shrink-0 mb-2"
             >
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sparkles className="w-4 h-4 text-foreground" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -65,8 +65,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
               isFocused ? "opacity-100" : "opacity-0"
             )}
             style={{
-              background: "linear-gradient(135deg, hsl(185 100% 50% / 0.1) 0%, hsl(280 100% 65% / 0.05) 100%)",
-              boxShadow: "0 0 30px hsl(185 100% 50% / 0.15)",
+              background: "linear-gradient(135deg, hsl(0 0% 0% / 0.02) 0%, hsl(0 0% 0% / 0.01) 100%)",
+              boxShadow: "0 0 20px hsl(0 0% 0% / 0.05)",
             }}
           />
           
@@ -81,9 +81,9 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             disabled={disabled}
             rows={1}
             className={cn(
-              "w-full resize-none bg-secondary/30 border border-border/30 rounded-2xl px-4 py-3 pr-12",
+              "w-full resize-none bg-muted/50 border border-border rounded-2xl px-4 py-3 pr-12",
               "text-sm placeholder:text-muted-foreground/50",
-              "focus:outline-none focus:border-primary/50",
+              "focus:outline-none focus:border-foreground/30",
               "transition-all duration-300",
               "disabled:opacity-50 disabled:cursor-not-allowed",
               "relative z-10"
@@ -94,7 +94,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           <Button
             size="icon"
             variant="ghost"
-            className="absolute right-2 bottom-2 text-muted-foreground/50 hover:text-primary transition-colors z-10"
+            className="absolute right-2 bottom-2 text-muted-foreground/50 hover:text-foreground transition-colors z-10"
           >
             <Mic className="w-4 h-4" />
           </Button>
@@ -112,8 +112,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             className={cn(
               "rounded-full flex-shrink-0 h-10 w-10 transition-all duration-300",
               message.trim()
-                ? "bg-gradient-to-br from-primary to-info text-primary-foreground shadow-[0_0_20px_hsl(185_100%_50%/0.4)]"
-                : "bg-secondary text-muted-foreground"
+                ? "bg-foreground text-background shadow-[0_4px_16px_hsl(0_0%_0%/0.15)]"
+                : "bg-muted text-muted-foreground"
             )}
           >
             <SendHorizontal className="w-4 h-4" />
@@ -123,7 +123,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
       {/* Keyboard hint */}
       <motion.p
-        className="text-[10px] text-muted-foreground/40 text-center mt-2 font-mono"
+        className="text-[10px] text-muted-foreground/50 text-center mt-2 font-mono"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}

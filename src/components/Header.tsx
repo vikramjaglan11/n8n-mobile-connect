@@ -19,10 +19,9 @@ export function Header({ isConnected, agentName = "Director" }: HeaderProps) {
         {/* Logo mark */}
         <div className="relative">
           <motion.div
-            className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden"
+            className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden bg-foreground"
             style={{
-              background: "linear-gradient(135deg, hsl(185 100% 50%) 0%, hsl(200 100% 40%) 100%)",
-              boxShadow: isConnected ? "0 0 20px hsl(185 100% 50% / 0.4)" : "none",
+              boxShadow: isConnected ? "0 4px 20px hsl(0 0% 0% / 0.15)" : "none",
             }}
             animate={{
               scale: isConnected ? [1, 1.02, 1] : 1,
@@ -33,13 +32,13 @@ export function Header({ isConnected, agentName = "Director" }: HeaderProps) {
               ease: "easeInOut",
             }}
           >
-            <Activity className="w-4 h-4 text-primary-foreground" />
+            <Activity className="w-4 h-4 text-background" />
           </motion.div>
           
           {/* Connection indicator */}
           <motion.span
             className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background ${
-              isConnected ? "bg-emerald-400" : "bg-destructive"
+              isConnected ? "bg-emerald-500" : "bg-destructive"
             }`}
             animate={isConnected ? {
               scale: [1, 1.2, 1],
@@ -55,7 +54,7 @@ export function Header({ isConnected, agentName = "Director" }: HeaderProps) {
         <div className="flex flex-col">
           <h1 className="font-semibold text-foreground tracking-tight text-sm">{agentName}</h1>
           <div className="flex items-center gap-1.5 text-xs">
-            <span className={`font-mono ${isConnected ? "text-emerald-400" : "text-destructive"}`}>
+            <span className={`font-mono ${isConnected ? "text-emerald-600" : "text-destructive"}`}>
               {isConnected ? "ONLINE" : "OFFLINE"}
             </span>
           </div>

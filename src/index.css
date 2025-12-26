@@ -6,56 +6,56 @@
 
 @layer base {
   :root {
-    /* Deep space dark theme */
-    --background: 230 25% 4%;
-    --foreground: 0 0% 98%;
+    /* Clean light theme with black accents */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 5%;
 
-    --card: 230 25% 7%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 5%;
 
-    --popover: 230 25% 9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 5%;
 
-    /* Cyber cyan accent */
-    --primary: 185 100% 50%;
-    --primary-foreground: 230 25% 4%;
+    /* Black accent */
+    --primary: 0 0% 8%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 230 25% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 10%;
 
-    --muted: 230 20% 18%;
-    --muted-foreground: 230 15% 55%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 280 100% 65%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 0% 90%;
+    --accent-foreground: 0 0% 8%;
 
-    --destructive: 0 85% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 230 25% 15%;
-    --input: 230 25% 12%;
-    --ring: 185 100% 50%;
+    --border: 0 0% 88%;
+    --input: 0 0% 94%;
+    --ring: 0 0% 8%;
 
     --radius: 1rem;
 
-    /* Extended palette for domains */
-    --domain-calendar: 185 100% 50%;
-    --domain-email: 45 100% 55%;
-    --domain-tasks: 145 80% 45%;
-    --domain-finance: 280 100% 65%;
-    --domain-research: 320 100% 60%;
-    --domain-network: 200 100% 55%;
+    /* Domain colors - subtle, muted tones */
+    --domain-calendar: 220 70% 50%;
+    --domain-email: 40 80% 55%;
+    --domain-tasks: 145 60% 42%;
+    --domain-finance: 260 60% 55%;
+    --domain-research: 320 60% 55%;
+    --domain-network: 195 70% 48%;
 
-    /* Glow effects */
-    --glow-primary: 0 0 60px hsl(185 100% 50% / 0.4), 0 0 120px hsl(185 100% 50% / 0.2);
-    --glow-accent: 0 0 60px hsl(280 100% 65% / 0.4), 0 0 120px hsl(280 100% 65% / 0.2);
-    --glow-pulse: 0 0 40px hsl(185 100% 50% / 0.6);
+    /* Subtle effects */
+    --glow-primary: 0 4px 20px hsl(0 0% 0% / 0.08);
+    --glow-accent: 0 4px 24px hsl(0 0% 0% / 0.12);
+    --glow-pulse: 0 4px 30px hsl(0 0% 0% / 0.15);
 
     /* Gradients */
-    --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(185 100% 50% / 0.15) 0%, transparent 60%);
-    --gradient-accent: linear-gradient(135deg, hsl(185 100% 50%) 0%, hsl(280 100% 65%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(230 25% 8%) 0%, hsl(230 25% 5%) 100%);
-    --gradient-orb: radial-gradient(circle at 30% 30%, hsl(185 100% 70% / 0.8) 0%, hsl(185 100% 50%) 50%, hsl(185 80% 35%) 100%);
+    --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(0 0% 0% / 0.03) 0%, transparent 60%);
+    --gradient-accent: linear-gradient(135deg, hsl(0 0% 15%) 0%, hsl(0 0% 30%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
+    --gradient-orb: radial-gradient(circle at 30% 30%, hsl(0 0% 40%) 0%, hsl(0 0% 15%) 50%, hsl(0 0% 8%) 100%);
 
     /* Animation tokens */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -63,21 +63,21 @@
     --transition-spring: 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
     /* Status colors */
-    --success: 145 80% 45%;
+    --success: 145 60% 42%;
     --success-foreground: 0 0% 98%;
-    --warning: 45 100% 55%;
-    --warning-foreground: 230 25% 4%;
-    --info: 200 100% 55%;
-    --info-foreground: 230 25% 4%;
+    --warning: 40 80% 55%;
+    --warning-foreground: 0 0% 10%;
+    --info: 200 70% 50%;
+    --info-foreground: 0 0% 98%;
 
-    --sidebar-background: 230 25% 4%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 185 100% 50%;
-    --sidebar-primary-foreground: 230 25% 4%;
-    --sidebar-accent: 230 25% 12%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 230 25% 15%;
-    --sidebar-ring: 185 100% 50%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 0 0% 8%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 0 0% 8%;
   }
 }
 
@@ -95,7 +95,7 @@
     font-family: 'Space Grotesk', system-ui, sans-serif;
   }
 
-  /* Premium scrollbar */
+  /* Minimal scrollbar */
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -106,32 +106,32 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-primary/30 rounded-full;
+    @apply bg-foreground/15 rounded-full;
     transition: background 0.3s ease;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary/50;
+    @apply bg-foreground/25;
   }
 }
 
 @layer utilities {
-  /* Glass morphism */
+  /* Glass morphism - light version */
   .glass {
-    @apply bg-card/60 backdrop-blur-2xl border border-border/30;
+    @apply bg-card/80 backdrop-blur-xl border border-border;
     box-shadow: 
-      0 8px 32px hsl(0 0% 0% / 0.3),
-      inset 0 1px 0 hsl(0 0% 100% / 0.05);
+      0 4px 20px hsl(0 0% 0% / 0.04),
+      inset 0 1px 0 hsl(0 0% 100% / 0.6);
   }
 
   .glass-strong {
-    @apply bg-card/80 backdrop-blur-3xl border border-border/50;
+    @apply bg-card/95 backdrop-blur-2xl border border-border;
     box-shadow: 
-      0 16px 64px hsl(0 0% 0% / 0.4),
-      inset 0 1px 0 hsl(0 0% 100% / 0.08);
+      0 8px 32px hsl(0 0% 0% / 0.08),
+      inset 0 1px 0 hsl(0 0% 100% / 0.8);
   }
 
-  /* Glows */
+  /* Subtle shadows */
   .glow-primary {
     box-shadow: var(--glow-primary);
   }
@@ -145,7 +145,7 @@
   }
 
   @keyframes glowPulse {
-    0%, 100% { box-shadow: 0 0 20px hsl(185 100% 50% / 0.3); }
+    0%, 100% { box-shadow: 0 4px 16px hsl(0 0% 0% / 0.06); }
     50% { box-shadow: var(--glow-pulse); }
   }
 
@@ -167,7 +167,7 @@
   .neural-line {
     background: linear-gradient(90deg, 
       transparent 0%, 
-      hsl(185 100% 50% / 0.6) 50%, 
+      hsl(0 0% 0% / 0.15) 50%, 
       transparent 100%
     );
   }
@@ -194,7 +194,7 @@
   }
 
   @keyframes pingSlow {
-    0% { transform: scale(1); opacity: 0.8; }
+    0% { transform: scale(1); opacity: 0.6; }
     50% { transform: scale(1.5); opacity: 0; }
     100% { transform: scale(1); opacity: 0; }
   }
@@ -219,7 +219,7 @@
     background: linear-gradient(
       90deg,
       hsl(var(--muted)) 0%,
-      hsl(var(--primary) / 0.1) 50%,
+      hsl(var(--border)) 50%,
       hsl(var(--muted)) 100%
     );
     background-size: 200% 100%;
@@ -254,19 +254,19 @@
   @keyframes particleFloat {
     0%, 100% { 
       transform: translate(0, 0) scale(1);
-      opacity: 0.6;
+      opacity: 0.4;
     }
     25% { 
       transform: translate(10px, -20px) scale(1.1);
-      opacity: 0.8;
+      opacity: 0.6;
     }
     50% { 
       transform: translate(-5px, -35px) scale(0.9);
-      opacity: 0.4;
+      opacity: 0.3;
     }
     75% { 
       transform: translate(15px, -15px) scale(1.05);
-      opacity: 0.7;
+      opacity: 0.5;
     }
   }
 
@@ -279,9 +279,9 @@
     transform: scale(1.1) translateY(-4px);
   }
 
-  /* Text shadow for better readability */
+  /* Text shadow for emphasis */
   .text-glow {
-    text-shadow: 0 0 30px hsl(185 100% 50% / 0.5);
+    text-shadow: 0 2px 12px hsl(0 0% 0% / 0.1);
   }
 
   /* Breathing animation for core */
@@ -302,7 +302,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, transparent, hsl(185 100% 50% / 0.5), transparent);
+    background: linear-gradient(90deg, transparent, hsl(0 0% 0% / 0.1), transparent);
     animation: scanLine 3s linear infinite;
   }
 
@@ -325,12 +325,12 @@
     50% { opacity: 0; }
   }
 
-  /* Noise texture overlay */
+  /* Subtle texture overlay */
   .noise-overlay {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    opacity: 0.015;
+    opacity: 0.02;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   }
 }

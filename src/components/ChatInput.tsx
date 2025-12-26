@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { SendHorizontal, Mic } from "lucide-react";
+import { SendHorizontal, Mic, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -10,6 +11,7 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [message, setMessage] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -34,44 +36,100 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="p-4 border-t border-border/50 glass">
-      <div className="flex items-end gap-2 max-w-2xl mx-auto">
+    <motion.div
+      className="p-4 glass-strong"
+      initial={{ y: 50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 200, damping: 25 }}
+    >
+      <div className="flex items-end gap-3 max-w-2xl mx-auto">
+        {/* Sparkle indicator */}
+        <AnimatePresence>
+          {isFocused && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="flex-shrink-0 mb-2"
+            >
+              <Sparkles className="w-4 h-4 text-primary" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input container */}
         <div className="flex-1 relative">
+          <motion.div
+            className={cn(
+              "absolute inset-0 rounded-2xl transition-opacity duration-300",
+              isFocused ? "opacity-100" : "opacity-0"
+            )}
+            style={{
+              background: "linear-gradient(135deg, hsl(185 100% 50% / 0.1) 0%, hsl(280 100% 65% / 0.05) 100%)",
+              boxShadow: "0 0 30px hsl(185 100% 50% / 0.15)",
+            }}
+          />
+          
           <textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message your Director..."
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder="Command your Director..."
             disabled={disabled}
             rows={1}
             className={cn(
-              "w-full resize-none bg-secondary/50 border border-border/50 rounded-2xl px-4 py-3 pr-12",
-              "text-sm placeholder:text-muted-foreground",
-              "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent",
-              "transition-all duration-200",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
+              "w-full resize-none bg-secondary/30 border border-border/30 rounded-2xl px-4 py-3 pr-12",
+              "text-sm placeholder:text-muted-foreground/50",
+              "focus:outline-none focus:border-primary/50",
+              "transition-all duration-300",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              "relative z-10"
             )}
           />
+          
+          {/* Mic button */}
           <Button
-            size="icon-sm"
+            size="icon"
             variant="ghost"
-            className="absolute right-2 bottom-2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2 bottom-2 text-muted-foreground/50 hover:text-primary transition-colors z-10"
           >
             <Mic className="w-4 h-4" />
           </Button>
         </div>
 
-        <Button
-          size="icon"
-          variant="glow"
-          onClick={handleSubmit}
-          disabled={!message.trim() || disabled}
-          className="rounded-full flex-shrink-0"
+        {/* Send button */}
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <SendHorizontal className="w-4 h-4" />
-        </Button>
+          <Button
+            size="icon"
+            onClick={handleSubmit}
+            disabled={!message.trim() || disabled}
+            className={cn(
+              "rounded-full flex-shrink-0 h-10 w-10 transition-all duration-300",
+              message.trim()
+                ? "bg-gradient-to-br from-primary to-info text-primary-foreground shadow-[0_0_20px_hsl(185_100%_50%/0.4)]"
+                : "bg-secondary text-muted-foreground"
+            )}
+          >
+            <SendHorizontal className="w-4 h-4" />
+          </Button>
+        </motion.div>
       </div>
-    </div>
+
+      {/* Keyboard hint */}
+      <motion.p
+        className="text-[10px] text-muted-foreground/40 text-center mt-2 font-mono"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        ENTER TO SEND • SHIFT+ENTER FOR NEW LINE
+      </motion.p>
+    </motion.div>
   );
 }

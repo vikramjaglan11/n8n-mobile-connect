@@ -27,9 +27,6 @@ import {
   ChatPlatform,
   CalendarAccount,
   TaskSection,
-  ignoreMessage,
-  addToWatch,
-  resolveWatchItem,
   archiveEmail,
   replyToEmail,
   replyToChat,
@@ -245,59 +242,9 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   };
 
   // Chat action handlers
-  const handleIgnoreChat = async (id: string) => {
+  const handleReplyChat = async (id: string, message: string) => {
     try {
-      await ignoreMessage(id);
-      setChatPlatforms((prev) =>
-        prev
-          .map((platform) => ({
-            ...platform,
-            messages: platform.messages.filter((m) => m.id !== id),
-            total: platform.total - 1,
-          }))
-          .filter((platform) => platform.messages.length > 0),
-      );
-      toast({ title: "Message ignored" });
-    } catch {
-      toast({ title: "Failed to ignore", variant: "destructive" });
-    }
-  };
-
-  const handleWatchChat = async (id: string) => {
-    try {
-      await addToWatch(id);
-      setChatPlatforms((prev) =>
-        prev.map((platform) => ({
-          ...platform,
-          messages: platform.messages.map((m) => (m.id === id ? { ...m, is_watch_item: true } : m)),
-        })),
-      );
-      toast({ title: "Added to watch list" });
-    } catch {
-      toast({ title: "Failed to add to watch", variant: "destructive" });
-    }
-  };
-
-  const handleUnwatchChat = async (id: string) => {
-    try {
-      await resolveWatchItem(id);
-      setChatPlatforms((prev) =>
-        prev
-          .map((platform) => ({
-            ...platform,
-            messages: platform.messages.map((m) => (m.id === id ? { ...m, is_watch_item: false } : m)),
-          }))
-          .filter((platform) => platform.messages.length > 0),
-      );
-      toast({ title: "Removed from watch list" });
-    } catch {
-      toast({ title: "Failed to remove watch", variant: "destructive" });
-    }
-  };
-
-  const handleReplyChat = async (id: string, message: string, platform: string) => {
-    try {
-      await replyToChat(id, message, platform);
+      await replyToChat(id, message);
       toast({ title: "Reply sent" });
     } catch {
       toast({ title: "Failed to send reply", variant: "destructive" });
@@ -488,9 +435,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                           <ChatCard
                             key={chat.id}
                             chat={chat}
-                            onIgnore={handleIgnoreChat}
-                            onWatch={handleWatchChat}
-                            onUnwatch={handleUnwatchChat}
                             onReply={handleReplyChat}
                           />
                         ))}
@@ -515,9 +459,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                               <ChatCard
                                 key={chat.id}
                                 chat={chat}
-                                onIgnore={handleIgnoreChat}
-                                onWatch={handleWatchChat}
-                                onUnwatch={handleUnwatchChat}
                                 onReply={handleReplyChat}
                               />
                             ))}

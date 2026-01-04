@@ -8,6 +8,7 @@ export interface CommunicationCard {
   sender_name: string;
   sender_phone?: string;
   content_preview: string;
+  content?: string;
   status: 'unread' | 'read' | 'watching' | 'replied' | 'ignored';
   is_watch_item: boolean;
   priority: 'urgent' | 'high' | 'normal' | 'low';

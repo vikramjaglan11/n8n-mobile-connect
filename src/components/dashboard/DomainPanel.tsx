@@ -12,12 +12,14 @@ import {
   RefreshCw,
   Eye,
   Plus,
+  ArrowDown,
 } from "lucide-react";
 import { EmailCard } from "@/components/communications/EmailCard";
 import { ChatCard } from "@/components/communications/ChatCard";
 import { CalendarCard } from "@/components/communications/CalendarCard";
 import { TaskCard } from "@/components/communications/TaskCard";
 import { ReplyInput } from "@/components/communications/ReplyInput";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import {
   getEmails,
   getChats,
@@ -323,6 +325,12 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const totalItems = totalEmails + totalChats + totalEvents + totalTasks;
   const isLoadingAny = loadingEmails || loadingChats || loadingCalendar || loadingTasks;
 
+  // Pull-to-refresh
+  const { pullDistance, isRefreshing, handlers } = usePullToRefresh({
+    onRefresh: fetchAll,
+    threshold: 80,
+  });
+
   const getLastFetchedText = () => {
     if (!lastFetched) return "Never";
     const diff = Math.floor((Date.now() - lastFetched.getTime()) / 1000);
@@ -375,8 +383,38 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
               </div>
             </div>
 
+            {/* Pull-to-refresh indicator */}
+            <div 
+              className="overflow-hidden transition-all duration-200 flex items-center justify-center"
+              style={{ height: pullDistance > 0 ? pullDistance : 0 }}
+            >
+              {pullDistance > 0 && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  {isRefreshing ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <ArrowDown 
+                      className="w-5 h-5 transition-transform" 
+                      style={{ 
+                        transform: pullDistance >= 80 ? "rotate(180deg)" : "rotate(0deg)",
+                        opacity: Math.min(pullDistance / 80, 1)
+                      }} 
+                    />
+                  )}
+                  <span className="text-xs">
+                    {isRefreshing ? "Refreshing..." : pullDistance >= 80 ? "Release to refresh" : "Pull to refresh"}
+                  </span>
+                </div>
+              )}
+            </div>
+
             {/* Sections */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div 
+              className="flex-1 overflow-y-auto p-4 space-y-3"
+              onTouchStart={handlers.onTouchStart}
+              onTouchMove={handlers.onTouchMove}
+              onTouchEnd={handlers.onTouchEnd}
+            >
               {/* Emails Section */}
               <Section
                 title="Emails"

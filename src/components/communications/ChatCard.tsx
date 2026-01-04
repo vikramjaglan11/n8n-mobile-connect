@@ -6,11 +6,12 @@ import {
   MessageSquare, 
   ChevronDown,
   ChevronUp,
-  Reply,
   Eye,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { ChatMessage } from '@/lib/communications-api';
+import { ReplyInput } from './ReplyInput';
 
 // Platform icons and colors
 const platformConfig: Record<string, { icon: string; color: string }> = {
@@ -22,13 +23,16 @@ const platformConfig: Record<string, { icon: string; color: string }> = {
 
 interface Props {
   chat: ChatMessage;
-  onIgnore?: (id: string) => void;
-  onWatch?: (id: string) => void;
-  onReply?: (id: string) => void;
+  onIgnore?: (id: string) => Promise<void>;
+  onWatch?: (id: string) => Promise<void>;
+  onReply?: (id: string, message: string, platform: string) => Promise<void>;
 }
 
 export function ChatCard({ chat, onIgnore, onWatch, onReply }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [isIgnoring, setIsIgnoring] = useState(false);
+  const [isWatching, setIsWatching] = useState(false);
   const config = platformConfig[chat.platform] || { icon: '💬', color: 'bg-muted' };
 
   const timeAgo = (date: string) => {
@@ -45,10 +49,43 @@ export function ChatCard({ chat, onIgnore, onWatch, onReply }: Props) {
     return `${diffDays}d ago`;
   };
 
+  const handleReplyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsReplying(true);
+  };
+
+  const handleSendReply = async (message: string) => {
+    if (onReply) {
+      await onReply(chat.id, message, chat.platform);
+    }
+  };
+
+  const handleIgnore = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onIgnore || isIgnoring) return;
+    setIsIgnoring(true);
+    try {
+      await onIgnore(chat.id);
+    } finally {
+      setIsIgnoring(false);
+    }
+  };
+
+  const handleWatch = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onWatch || isWatching) return;
+    setIsWatching(true);
+    try {
+      await onWatch(chat.id);
+    } finally {
+      setIsWatching(false);
+    }
+  };
+
   return (
     <Card 
       className="mb-2 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={() => !isReplying && setIsExpanded(!isExpanded)}
     >
       <CardContent className="p-3">
         {/* Header */}
@@ -98,13 +135,13 @@ export function ChatCard({ chat, onIgnore, onWatch, onReply }: Props) {
         </p>
 
         {/* Expanded actions */}
-        {isExpanded && (
+        {isExpanded && !isReplying && (
           <div className="flex gap-2 mt-3 pt-3 border-t border-border" onClick={e => e.stopPropagation()}>
             <Button 
               variant="outline" 
               size="sm" 
               className="flex-1"
-              onClick={() => onReply?.(chat.id)}
+              onClick={handleReplyClick}
             >
               <MessageSquare className="w-3 h-3 mr-1" /> Reply
             </Button>
@@ -112,19 +149,39 @@ export function ChatCard({ chat, onIgnore, onWatch, onReply }: Props) {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => onWatch?.(chat.id)}
+                onClick={handleWatch}
+                disabled={isWatching}
               >
-                <Eye className="w-3 h-3 mr-1" /> Watch
+                {isWatching ? (
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                ) : (
+                  <Eye className="w-3 h-3 mr-1" />
+                )}
+                Watch
               </Button>
             )}
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => onIgnore?.(chat.id)}
+              onClick={handleIgnore}
+              disabled={isIgnoring}
             >
-              <X className="w-3 h-3" />
+              {isIgnoring ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <X className="w-3 h-3" />
+              )}
             </Button>
           </div>
+        )}
+
+        {/* Reply input */}
+        {isReplying && (
+          <ReplyInput
+            onSend={handleSendReply}
+            onCancel={() => setIsReplying(false)}
+            placeholder={`Reply to ${chat.sender_name}...`}
+          />
         )}
       </CardContent>
     </Card>

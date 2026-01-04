@@ -7,18 +7,22 @@ import {
   ChevronDown,
   ChevronUp,
   Reply,
-  Archive
+  Archive,
+  Loader2
 } from 'lucide-react';
 import { Email } from '@/lib/communications-api';
+import { ReplyInput } from './ReplyInput';
 
 interface Props {
   email: Email;
-  onArchive?: (id: string) => void;
-  onReply?: (id: string) => void;
+  onArchive?: (id: string) => Promise<void>;
+  onReply?: (id: string, message: string) => Promise<void>;
 }
 
 export function EmailCard({ email, onArchive, onReply }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const timeAgo = (date: string) => {
     const now = new Date();
@@ -34,10 +38,32 @@ export function EmailCard({ email, onArchive, onReply }: Props) {
     return `${diffDays}d ago`;
   };
 
+  const handleArchive = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onArchive || isArchiving) return;
+    setIsArchiving(true);
+    try {
+      await onArchive(email.id);
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const handleReplyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsReplying(true);
+  };
+
+  const handleSendReply = async (message: string) => {
+    if (onReply) {
+      await onReply(email.id, message);
+    }
+  };
+
   return (
     <Card 
       className="mb-2 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={() => !isReplying && setIsExpanded(!isExpanded)}
     >
       <CardContent className="p-3">
         {/* Header */}
@@ -79,24 +105,39 @@ export function EmailCard({ email, onArchive, onReply }: Props) {
         </p>
 
         {/* Expanded actions */}
-        {isExpanded && (
+        {isExpanded && !isReplying && (
           <div className="flex gap-2 mt-3 pt-3 border-t border-border" onClick={e => e.stopPropagation()}>
             <Button 
               variant="outline" 
               size="sm" 
               className="flex-1"
-              onClick={() => onReply?.(email.id)}
+              onClick={handleReplyClick}
             >
               <Reply className="w-3 h-3 mr-1" /> Reply
             </Button>
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => onArchive?.(email.id)}
+              onClick={handleArchive}
+              disabled={isArchiving}
             >
-              <Archive className="w-3 h-3 mr-1" /> Archive
+              {isArchiving ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <Archive className="w-3 h-3 mr-1" />
+              )}
+              Archive
             </Button>
           </div>
+        )}
+
+        {/* Reply input */}
+        {isReplying && (
+          <ReplyInput
+            onSend={handleSendReply}
+            onCancel={() => setIsReplying(false)}
+            placeholder={`Reply to ${email.sender_name}...`}
+          />
         )}
       </CardContent>
     </Card>

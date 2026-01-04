@@ -21,12 +21,14 @@ import { ReplyInput } from "@/components/communications/ReplyInput";
 import {
   getEmails,
   getChats,
+  getWatchItems,
   getCalendarToday,
   getTasks,
   EmailAccount,
   ChatPlatform,
   CalendarAccount,
   TaskSection,
+  WatchItemPlatform,
   archiveEmail,
   replyToEmail,
   replyToChat,
@@ -127,6 +129,8 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const [totalUnreadEmails, setTotalUnreadEmails] = useState(0);
 
   const [chatPlatforms, setChatPlatforms] = useState<ChatPlatform[]>([]);
+  const [watchItemPlatforms, setWatchItemPlatforms] = useState<WatchItemPlatform[]>([]);
+  const [totalWatchItems, setTotalWatchItems] = useState(0);
 
   const [calendarAccounts, setCalendarAccounts] = useState<CalendarAccount[]>([]);
 
@@ -163,8 +167,10 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const fetchChats = async () => {
     setLoadingChats(true);
     try {
-      const data = await getChats();
-      setChatPlatforms(data.platforms || []);
+      const [chatsData, watchData] = await Promise.all([getChats(), getWatchItems()]);
+      setChatPlatforms(chatsData.platforms || []);
+      setWatchItemPlatforms(watchData.watch_items || []);
+      setTotalWatchItems(watchData.total_items || 0);
     } catch (error) {
       console.error("Failed to fetch chats:", error);
     } finally {
@@ -309,19 +315,8 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const totalEvents = useMemo(() => calendarAccounts.reduce((sum, c) => sum + c.event_count, 0), [calendarAccounts]);
   const totalTasks = useMemo(() => taskSections.reduce((sum, s) => sum + s.count, 0), [taskSections]);
 
-  const allWatchItems = useMemo(
-    () => chatPlatforms.flatMap((p) => p.messages.filter((m) => m.is_watch_item)),
-    [chatPlatforms],
-  );
-
-  const totalWatchItems = allWatchItems.length;
-
   const totalUnreadChats = useMemo(
-    () =>
-      chatPlatforms.reduce(
-        (sum, p) => sum + p.messages.filter((m) => m.status === "unread" && !m.is_watch_item).length,
-        0,
-      ),
+    () => chatPlatforms.reduce((sum, p) => sum + p.unread_count, 0),
     [chatPlatforms],
   );
 
@@ -420,52 +415,63 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 isExpanded={expandedSections.chats}
                 onToggle={() => toggleSection("chats")}
               >
-                {chatPlatforms.length === 0 ? (
+                {chatPlatforms.length === 0 && watchItemPlatforms.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No chats</p>
                 ) : (
                   <>
-                    {/* Watch list across ALL platforms */}
-                    {allWatchItems.length > 0 && (
+                    {/* Watch items from dedicated endpoint */}
+                    {watchItemPlatforms.length > 0 && (
                       <div className="mb-4">
                         <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
-                          <span>Watch items</span>
-                          <span className="text-muted-foreground">{allWatchItems.length}</span>
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3 h-3" /> Watch items
+                          </span>
+                          <span className="text-muted-foreground">{totalWatchItems} watching</span>
                         </p>
-                        {allWatchItems.map((chat) => (
-                          <ChatCard
-                            key={chat.id}
-                            chat={chat}
-                            onReply={handleReplyChat}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Platform lists (excluding watch items) */}
-                    {chatPlatforms
-                      .map((platform) => {
-                        const regularMessages = platform.messages.filter((m) => !m.is_watch_item);
-                        const platformUnread = regularMessages.filter((m) => m.status === "unread").length;
-
-                        if (regularMessages.length === 0) return null;
-
-                        return (
-                          <div key={platform.platform} className="mb-4">
-                            <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
-                              <span>{platform.display_name}</span>
-                              {platformUnread > 0 && <span className="text-primary">{platformUnread} unread</span>}
+                        {watchItemPlatforms.map((platform) => (
+                          <div key={platform.platform_name} className="mb-2">
+                            <p className="text-xs text-muted-foreground/70 mb-1 px-1 capitalize">
+                              {platform.platform_name.replace(/_/g, " ")}
                             </p>
-                            {regularMessages.map((chat) => (
+                            {platform.items.map((item) => (
                               <ChatCard
-                                key={chat.id}
-                                chat={chat}
+                                key={item.id}
+                                chat={{
+                                  id: item.id,
+                                  sender_name: item.sender_name,
+                                  content_preview: item.content_preview,
+                                  content: item.content,
+                                  received_at: item.received_at,
+                                  platform: item.platform,
+                                  status: "watching",
+                                  is_watch_item: true,
+                                }}
                                 onReply={handleReplyChat}
                               />
                             ))}
                           </div>
-                        );
-                      })
-                      .filter(Boolean)}
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Platform lists */}
+                    {chatPlatforms
+                      .filter((platform) => platform.messages.length > 0)
+                      .map((platform) => (
+                        <div key={platform.platform} className="mb-4">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
+                            <span>{platform.display_name}</span>
+                            {platform.unread_count > 0 && <span className="text-primary">{platform.unread_count} unread</span>}
+                          </p>
+                          {platform.messages.map((chat) => (
+                            <ChatCard
+                              key={chat.id}
+                              chat={chat}
+                              onReply={handleReplyChat}
+                            />
+                          ))}
+                        </div>
+                      ))}
                   </>
                 )}
               </Section>

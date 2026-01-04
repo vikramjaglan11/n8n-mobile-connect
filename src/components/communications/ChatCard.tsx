@@ -10,7 +10,7 @@ import {
   Eye,
   X
 } from 'lucide-react';
-import { ChatCard as ChatCardType } from '@/lib/communications-api';
+import { ChatMessage } from '@/lib/communications-api';
 
 // Platform icons and colors
 const platformConfig: Record<string, { icon: string; color: string }> = {
@@ -21,7 +21,7 @@ const platformConfig: Record<string, { icon: string; color: string }> = {
 };
 
 interface Props {
-  chat: ChatCardType;
+  chat: ChatMessage;
   onIgnore?: (id: string) => void;
   onWatch?: (id: string) => void;
   onReply?: (id: string) => void;
@@ -67,13 +67,16 @@ export function ChatCard({ chat, onIgnore, onWatch, onReply }: Props) {
                 <span className="font-medium text-sm text-foreground truncate">
                   {chat.sender_name}
                 </span>
-                {chat.priority === 'urgent' && (
+                {chat.priority === 'high' && (
                   <Badge variant="destructive" className="text-xs px-1 py-0">!</Badge>
                 )}
                 {chat.is_watch_item && (
                   <Badge variant="secondary" className="text-xs px-1 py-0">
                     <Eye className="w-2 h-2" />
                   </Badge>
+                )}
+                {chat.status === 'unread' && (
+                  <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
               </div>
               <span className="text-xs text-muted-foreground capitalize">{chat.platform.replace('_', ' ')}</span>

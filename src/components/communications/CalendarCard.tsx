@@ -18,7 +18,8 @@ interface Props {
 export function CalendarCard({ event }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const formatTime = (dateStr: string) => {
+  const formatTime = (dateStr?: string) => {
+    if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleTimeString('en-US', { 
       hour: 'numeric', 
@@ -28,15 +29,17 @@ export function CalendarCard({ event }: Props) {
   };
 
   const isNow = () => {
+    if (!event.start || !event.end) return false;
     const now = new Date();
-    const start = new Date(event.start_time);
-    const end = new Date(event.end_time);
+    const start = new Date(event.start);
+    const end = new Date(event.end);
     return now >= start && now <= end;
   };
 
   const isSoon = () => {
+    if (!event.start) return false;
     const now = new Date();
-    const start = new Date(event.start_time);
+    const start = new Date(event.start);
     const diffMins = (start.getTime() - now.getTime()) / 60000;
     return diffMins > 0 && diffMins <= 30;
   };
@@ -60,7 +63,7 @@ export function CalendarCard({ event }: Props) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-sm text-foreground truncate">
-                  {event.title}
+                  {event.title || '(No Title)'}
                 </span>
                 {isNow() && (
                   <Badge className="text-xs px-1 py-0 bg-primary">Now</Badge>
@@ -69,8 +72,8 @@ export function CalendarCard({ event }: Props) {
                   <Badge variant="secondary" className="text-xs px-1 py-0 bg-amber-500/20 text-amber-600">Soon</Badge>
                 )}
               </div>
-              {event.calendar_name && (
-                <span className="text-xs text-muted-foreground">{event.calendar_name}</span>
+              {event.calendar_account && (
+                <span className="text-xs text-muted-foreground">{event.calendar_account}</span>
               )}
             </div>
           </div>
@@ -88,8 +91,10 @@ export function CalendarCard({ event }: Props) {
           <Clock className="w-3 h-3" />
           {event.is_all_day ? (
             <span>All day</span>
+          ) : event.start && event.end ? (
+            <span>{formatTime(event.start)} - {formatTime(event.end)}</span>
           ) : (
-            <span>{formatTime(event.start_time)} - {formatTime(event.end_time)}</span>
+            <span>Time not specified</span>
           )}
         </div>
 

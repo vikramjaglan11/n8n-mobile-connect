@@ -9,10 +9,10 @@ import {
   Reply,
   Archive
 } from 'lucide-react';
-import { EmailCard as EmailCardType } from '@/lib/communications-api';
+import { Email } from '@/lib/communications-api';
 
 interface Props {
-  email: EmailCardType;
+  email: Email;
   onArchive?: (id: string) => void;
   onReply?: (id: string) => void;
 }
@@ -51,8 +51,11 @@ export function EmailCard({ email, onArchive, onReply }: Props) {
                 <span className="font-medium text-sm text-foreground truncate">
                   {email.sender_name}
                 </span>
-                {email.priority === 'urgent' && (
+                {(email.priority === 'urgent' || email.priority === 'high') && (
                   <Badge variant="destructive" className="text-xs px-1 py-0">!</Badge>
+                )}
+                {email.status === 'unread' && (
+                  <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
               </div>
               {email.subject && (

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { sendMessage as sendApiMessage } from '@/lib/api';
 
-interface Message {
+export interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
@@ -57,5 +57,6 @@ export function useDirectorAgent() {
     isLoading,
     sendMessage,
     clearMessages,
+    setMessages,
   };
 }

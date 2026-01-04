@@ -7,9 +7,18 @@ import { ChatInput, ChatInputRef } from "@/components/ChatInput";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { NeuralBackground } from "@/components/core/NeuralBackground";
 import { useDirectorAgent } from "@/hooks/useDirectorAgent";
+import { useConversationHistory } from "@/hooks/useConversationHistory";
 
 const Index = () => {
-  const { messages, isLoading, sendMessage, clearMessages } = useDirectorAgent();
+  const { messages, isLoading, sendMessage, clearMessages, setMessages } = useDirectorAgent();
+  const { 
+    conversations, 
+    currentConversationId,
+    saveConversation, 
+    loadConversation, 
+    deleteConversation,
+    startNewConversation 
+  } = useConversationHistory();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<ChatInputRef>(null);
 
@@ -21,6 +30,16 @@ const Index = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Save conversation when messages change (debounced effect)
+  useEffect(() => {
+    if (messages.length > 0) {
+      const timer = setTimeout(() => {
+        saveConversation(messages);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, saveConversation]);
+
   const handleSendMessage = async (content: string) => {
     await sendMessage(content);
   };
@@ -31,6 +50,21 @@ const Index = () => {
 
   const handleBackToHome = () => {
     clearMessages();
+    startNewConversation();
+  };
+
+  const handleSelectConversation = (id: string) => {
+    const conversation = loadConversation(id);
+    if (conversation) {
+      setMessages(conversation.messages);
+    }
+  };
+
+  const handleDeleteConversation = (id: string) => {
+    deleteConversation(id);
+    if (currentConversationId === id) {
+      clearMessages();
+    }
   };
 
   return (
@@ -40,7 +74,13 @@ const Index = () => {
 
       {/* Main content */}
       <div className="relative z-10 flex flex-col h-full">
-        <Header isConnected={true} />
+        <Header 
+          isConnected={true}
+          conversations={conversations}
+          currentConversationId={currentConversationId}
+          onSelectConversation={handleSelectConversation}
+          onDeleteConversation={handleDeleteConversation}
+        />
 
         <main className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">

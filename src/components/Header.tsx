@@ -1,13 +1,26 @@
 import { motion } from "framer-motion";
 import { Settings, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConversationHistory } from "@/components/ConversationHistory";
+import { Conversation } from "@/hooks/useConversationHistory";
 
 interface HeaderProps {
   isConnected: boolean;
   agentName?: string;
+  conversations?: Conversation[];
+  currentConversationId?: string | null;
+  onSelectConversation?: (id: string) => void;
+  onDeleteConversation?: (id: string) => void;
 }
 
-export function Header({ isConnected, agentName = "Director" }: HeaderProps) {
+export function Header({ 
+  isConnected, 
+  agentName = "Director",
+  conversations = [],
+  currentConversationId = null,
+  onSelectConversation,
+  onDeleteConversation,
+}: HeaderProps) {
   return (
     <motion.header
       className="flex items-center justify-between px-4 py-3 glass-strong sticky top-0 z-50"
@@ -61,9 +74,17 @@ export function Header({ isConnected, agentName = "Director" }: HeaderProps) {
         </div>
       </div>
 
-      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-        <Settings className="w-4 h-4" />
-      </Button>
+      <div className="flex items-center gap-1">
+        <ConversationHistory
+          conversations={conversations}
+          currentConversationId={currentConversationId}
+          onSelect={onSelectConversation || (() => {})}
+          onDelete={onDeleteConversation || (() => {})}
+        />
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+          <Settings className="w-4 h-4" />
+        </Button>
+      </div>
     </motion.header>
   );
 }

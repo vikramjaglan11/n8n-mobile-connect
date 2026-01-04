@@ -132,11 +132,27 @@ export function CommunicationCard({ message, onIgnore, onWatch, onResolve, onRep
           </DropdownMenu>
         </div>
 
-        {/* Message content */}
-        <div className="mb-3">
-          <p className="text-sm text-foreground/90 line-clamp-2">
-            {message.content_preview}
+        {/* Message content - expandable */}
+        <div 
+          className="mb-3 cursor-pointer group"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <p className={`text-sm text-foreground/90 ${!isExpanded ? 'line-clamp-2' : ''}`}>
+            {isExpanded && message.content ? message.content : message.content_preview}
           </p>
+          {(message.content && message.content !== message.content_preview) && (
+            <button className="flex items-center gap-1 mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="w-3 h-3" /> Show less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-3 h-3" /> Show more
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Watch item status */}

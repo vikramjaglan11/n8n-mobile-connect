@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
@@ -11,11 +11,13 @@ import {
   Loader2,
   RefreshCw,
   Eye,
+  Plus,
 } from "lucide-react";
 import { EmailCard } from "@/components/communications/EmailCard";
 import { ChatCard } from "@/components/communications/ChatCard";
 import { CalendarCard } from "@/components/communications/CalendarCard";
 import { TaskCard } from "@/components/communications/TaskCard";
+import { ReplyInput } from "@/components/communications/ReplyInput";
 import {
   getEmails,
   getChats,
@@ -27,6 +29,7 @@ import {
   TaskSection,
   ignoreMessage,
   addToWatch,
+  resolveWatchItem,
   archiveEmail,
   replyToEmail,
   replyToChat,
@@ -34,6 +37,7 @@ import {
   editCalendarEvent,
 } from "@/lib/communications-api";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface DomainPanelProps {
   isOpen: boolean;
@@ -53,7 +57,17 @@ interface SectionProps {
   children: React.ReactNode;
 }
 
-function Section({ title, icon, count, unreadCount, watchCount, isLoading, isExpanded, onToggle, children }: SectionProps) {
+function Section({
+  title,
+  icon,
+  count,
+  unreadCount,
+  watchCount,
+  isLoading,
+  isExpanded,
+  onToggle,
+  children,
+}: SectionProps) {
   return (
     <div className="border border-border/50 rounded-xl overflow-hidden bg-background">
       <button
@@ -61,38 +75,28 @@ function Section({ title, icon, count, unreadCount, watchCount, isLoading, isExp
         onClick={onToggle}
       >
         <div className="w-10 h-10 rounded-xl bg-foreground/5 flex items-center justify-center">
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 text-foreground/50 animate-spin" />
-          ) : (
-            icon
-          )}
+          {isLoading ? <Loader2 className="w-5 h-5 text-foreground/50 animate-spin" /> : icon}
         </div>
         <div className="flex-1 text-left">
           <h3 className="font-medium text-foreground">{title}</h3>
-          <p className="text-xs text-muted-foreground">
-            {isLoading ? "Loading..." : `${count} items`}
-          </p>
+          <p className="text-xs text-muted-foreground">{isLoading ? "Loading..." : `${count} items`}</p>
         </div>
         <div className="flex items-center gap-2">
           {watchCount !== undefined && watchCount > 0 && !isLoading && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-600 flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground flex items-center gap-1">
               <Eye className="w-3 h-3" />
-              {watchCount}
+              {watchCount} watch
             </span>
           )}
           {unreadCount !== undefined && unreadCount > 0 && !isLoading && (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary text-primary-foreground">
-              {unreadCount} new
+              {unreadCount} unread
             </span>
           )}
         </div>
-        {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        )}
+        {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
       </button>
-      
+
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -102,9 +106,7 @@ function Section({ title, icon, count, unreadCount, watchCount, isLoading, isExp
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-3 pt-0 max-h-80 overflow-y-auto">
-              {children}
-            </div>
+            <div className="p-3 pt-0 max-h-80 overflow-y-auto">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -114,7 +116,7 @@ function Section({ title, icon, count, unreadCount, watchCount, isLoading, isExp
 
 export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProps) {
   const { toast } = useToast();
-  
+
   // Section expansion states
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     emails: false,
@@ -126,13 +128,15 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   // Data states
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [totalUnreadEmails, setTotalUnreadEmails] = useState(0);
-  
+
   const [chatPlatforms, setChatPlatforms] = useState<ChatPlatform[]>([]);
-  const [totalUnreadChats, setTotalUnreadChats] = useState(0);
-  
+
   const [calendarAccounts, setCalendarAccounts] = useState<CalendarAccount[]>([]);
-  
+
   const [taskSections, setTaskSections] = useState<TaskSection[]>([]);
+
+  // UI states
+  const [calendarCommandOpen, setCalendarCommandOpen] = useState(false);
 
   // Loading states
   const [loadingEmails, setLoadingEmails] = useState(false);
@@ -142,7 +146,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
   // Fetch functions
@@ -153,7 +157,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
       setEmailAccounts(data.accounts || []);
       setTotalUnreadEmails(data.total_unread || 0);
     } catch (error) {
-      console.error('Failed to fetch emails:', error);
+      console.error("Failed to fetch emails:", error);
     } finally {
       setLoadingEmails(false);
     }
@@ -164,9 +168,8 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     try {
       const data = await getChats();
       setChatPlatforms(data.platforms || []);
-      setTotalUnreadChats(data.total_unread || 0);
     } catch (error) {
-      console.error('Failed to fetch chats:', error);
+      console.error("Failed to fetch chats:", error);
     } finally {
       setLoadingChats(false);
     }
@@ -176,11 +179,10 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     setLoadingCalendar(true);
     try {
       const data = await getCalendarToday();
-      // Filter to only show calendars with events
-      const calendarsWithEvents = (data.calendars || []).filter(c => c.event_count > 0);
+      const calendarsWithEvents = (data.calendars || []).filter((c) => c.event_count > 0);
       setCalendarAccounts(calendarsWithEvents);
     } catch (error) {
-      console.error('Failed to fetch calendar:', error);
+      console.error("Failed to fetch calendar:", error);
     } finally {
       setLoadingCalendar(false);
     }
@@ -192,7 +194,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
       const data = await getTasks();
       setTaskSections(data.sections || []);
     } catch (error) {
-      console.error('Failed to fetch tasks:', error);
+      console.error("Failed to fetch tasks:", error);
     } finally {
       setLoadingTasks(false);
     }
@@ -213,15 +215,19 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const handleArchiveEmail = async (id: string) => {
     try {
       await archiveEmail(id);
-      // Remove the email from accounts
-      setEmailAccounts(prev => prev.map(account => ({
-        ...account,
-        emails: account.emails.filter(e => e.id !== id),
-        total: account.total - 1,
-        unread_count: account.emails.find(e => e.id === id)?.status === 'unread' 
-          ? account.unread_count - 1 
-          : account.unread_count
-      })).filter(account => account.emails.length > 0));
+      setEmailAccounts((prev) =>
+        prev
+          .map((account) => ({
+            ...account,
+            emails: account.emails.filter((e) => e.id !== id),
+            total: account.total - 1,
+            unread_count:
+              account.emails.find((e) => e.id === id)?.status === "unread"
+                ? account.unread_count - 1
+                : account.unread_count,
+          }))
+          .filter((account) => account.emails.length > 0),
+      );
       toast({ title: "Email archived" });
     } catch {
       toast({ title: "Failed to archive", variant: "destructive" });
@@ -242,11 +248,15 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const handleIgnoreChat = async (id: string) => {
     try {
       await ignoreMessage(id);
-      setChatPlatforms(prev => prev.map(platform => ({
-        ...platform,
-        messages: platform.messages.filter(m => m.id !== id),
-        total: platform.total - 1
-      })).filter(platform => platform.messages.length > 0));
+      setChatPlatforms((prev) =>
+        prev
+          .map((platform) => ({
+            ...platform,
+            messages: platform.messages.filter((m) => m.id !== id),
+            total: platform.total - 1,
+          }))
+          .filter((platform) => platform.messages.length > 0),
+      );
       toast({ title: "Message ignored" });
     } catch {
       toast({ title: "Failed to ignore", variant: "destructive" });
@@ -256,15 +266,32 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const handleWatchChat = async (id: string) => {
     try {
       await addToWatch(id);
-      setChatPlatforms(prev => prev.map(platform => ({
-        ...platform,
-        messages: platform.messages.map(m => 
-          m.id === id ? { ...m, is_watch_item: true, status: 'watching' } : m
-        )
-      })));
+      setChatPlatforms((prev) =>
+        prev.map((platform) => ({
+          ...platform,
+          messages: platform.messages.map((m) => (m.id === id ? { ...m, is_watch_item: true } : m)),
+        })),
+      );
       toast({ title: "Added to watch list" });
     } catch {
       toast({ title: "Failed to add to watch", variant: "destructive" });
+    }
+  };
+
+  const handleUnwatchChat = async (id: string) => {
+    try {
+      await resolveWatchItem(id);
+      setChatPlatforms((prev) =>
+        prev
+          .map((platform) => ({
+            ...platform,
+            messages: platform.messages.map((m) => (m.id === id ? { ...m, is_watch_item: false } : m)),
+          }))
+          .filter((platform) => platform.messages.length > 0),
+      );
+      toast({ title: "Removed from watch list" });
+    } catch {
+      toast({ title: "Failed to remove watch", variant: "destructive" });
     }
   };
 
@@ -279,16 +306,19 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   };
 
   // Calendar action handler
-  const handleEditCalendar = async (eventId: string, action: 'delete' | 'update', message?: string) => {
+  const handleEditCalendar = async (eventId: string, action: "delete" | "update", message?: string) => {
     try {
       await editCalendarEvent(eventId, action, message);
-      if (action === 'delete') {
-        // Remove the event
-        setCalendarAccounts(prev => prev.map(calendar => ({
-          ...calendar,
-          events: calendar.events.filter(e => e.id !== eventId),
-          event_count: calendar.event_count - 1
-        })).filter(calendar => calendar.events.length > 0));
+      if (action === "delete") {
+        setCalendarAccounts((prev) =>
+          prev
+            .map((calendar) => ({
+              ...calendar,
+              events: calendar.events.filter((e) => e.id !== eventId),
+              event_count: calendar.event_count - 1,
+            }))
+            .filter((calendar) => calendar.events.length > 0),
+        );
         toast({ title: message ? "Event deleted & attendees notified" : "Event deleted" });
       }
     } catch {
@@ -296,32 +326,60 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     }
   };
 
+  const handleSendCalendarCommand = async (command: string) => {
+    try {
+      onSelectDomain(command);
+      toast({ title: "Command sent" });
+      setCalendarCommandOpen(false);
+    } catch {
+      toast({ title: "Failed to send command", variant: "destructive" });
+      throw new Error("Failed to send");
+    }
+  };
+
   // Task action handler
   const handleCompleteTask = async (id: string) => {
     try {
       await completeTask(id);
-      // Remove the task from sections
-      setTaskSections(prev => prev.map(section => ({
-        ...section,
-        tasks: section.tasks.filter(t => t.id !== id),
-        count: section.count - 1
-      })).filter(section => section.tasks.length > 0));
+      setTaskSections((prev) =>
+        prev
+          .map((section) => ({
+            ...section,
+            tasks: section.tasks.filter((t) => t.id !== id),
+            count: section.count - 1,
+          }))
+          .filter((section) => section.tasks.length > 0),
+      );
       toast({ title: "Task completed" });
     } catch {
       toast({ title: "Failed to complete task", variant: "destructive" });
     }
   };
 
-  // Calculate totals and watch counts
-  const totalEmails = emailAccounts.reduce((sum, acc) => sum + acc.total, 0);
-  const totalChats = chatPlatforms.reduce((sum, p) => sum + p.total, 0);
-  const totalEvents = calendarAccounts.reduce((sum, c) => sum + c.event_count, 0);
-  const totalTasks = taskSections.reduce((sum, s) => sum + s.count, 0);
-  
-  // Count watch items in chats
-  const totalWatchItems = chatPlatforms.reduce((sum, p) => 
-    sum + p.messages.filter(m => m.is_watch_item).length, 0
+  // Derived counts
+  const totalEmails = useMemo(() => emailAccounts.reduce((sum, acc) => sum + acc.total, 0), [emailAccounts]);
+  const totalChats = useMemo(() => chatPlatforms.reduce((sum, p) => sum + p.total, 0), [chatPlatforms]);
+  const totalEvents = useMemo(() => calendarAccounts.reduce((sum, c) => sum + c.event_count, 0), [calendarAccounts]);
+  const totalTasks = useMemo(() => taskSections.reduce((sum, s) => sum + s.count, 0), [taskSections]);
+
+  const allWatchItems = useMemo(
+    () => chatPlatforms.flatMap((p) => p.messages.filter((m) => m.is_watch_item)),
+    [chatPlatforms],
   );
+
+  const totalWatchItems = allWatchItems.length;
+
+  const totalUnreadChats = useMemo(
+    () =>
+      chatPlatforms.reduce(
+        (sum, p) => sum + p.messages.filter((m) => m.status === "unread" && !m.is_watch_item).length,
+        0,
+      ),
+    [chatPlatforms],
+  );
+
+  const totalItems = totalEmails + totalChats + totalEvents + totalTasks;
+  const isLoadingAny = loadingEmails || loadingChats || loadingCalendar || loadingTasks;
 
   const getLastFetchedText = () => {
     if (!lastFetched) return "Never";
@@ -330,9 +388,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     return `${Math.floor(diff / 3600)}h ago`;
   };
-
-  const totalItems = totalEmails + totalChats + totalEvents + totalTasks;
-  const isLoadingAny = loadingEmails || loadingChats || loadingCalendar || loadingTasks;
 
   return (
     <AnimatePresence>
@@ -359,9 +414,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
                 <h2 className="font-semibold text-foreground">Inbox</h2>
-                <p className="text-xs text-muted-foreground">
-                  {isLoadingAny ? "Fetching latest..." : `${totalItems} items total`}
-                </p>
+                <p className="text-xs text-muted-foreground">{isLoadingAny ? "Fetching latest..." : `${totalItems} items total`}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -369,7 +422,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                   disabled={isLoadingAny}
                   className="w-8 h-8 rounded-lg hover:bg-foreground/5 flex items-center justify-center transition-colors disabled:opacity-50"
                 >
-                  <RefreshCw className={`w-4 h-4 text-muted-foreground ${isLoadingAny ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 text-muted-foreground ${isLoadingAny ? "animate-spin" : ""}`} />
                 </button>
                 <button
                   onClick={onClose}
@@ -390,7 +443,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 unreadCount={totalUnreadEmails}
                 isLoading={loadingEmails}
                 isExpanded={expandedSections.emails}
-                onToggle={() => toggleSection('emails')}
+                onToggle={() => toggleSection("emails")}
               >
                 {emailAccounts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No emails</p>
@@ -399,17 +452,10 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                     <div key={account.account_name} className="mb-4">
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
                         <span>{account.account_name}</span>
-                        {account.unread_count > 0 && (
-                          <span className="text-primary">{account.unread_count} unread</span>
-                        )}
+                        {account.unread_count > 0 && <span className="text-primary">{account.unread_count} unread</span>}
                       </p>
-                      {account.emails.map(email => (
-                        <EmailCard 
-                          key={email.id} 
-                          email={email}
-                          onArchive={handleArchiveEmail}
-                          onReply={handleReplyEmail}
-                        />
+                      {account.emails.map((email) => (
+                        <EmailCard key={email.id} email={email} onArchive={handleArchiveEmail} onReply={handleReplyEmail} />
                       ))}
                     </div>
                   ))
@@ -425,53 +471,61 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 watchCount={totalWatchItems}
                 isLoading={loadingChats}
                 isExpanded={expandedSections.chats}
-                onToggle={() => toggleSection('chats')}
+                onToggle={() => toggleSection("chats")}
               >
                 {chatPlatforms.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No chats</p>
                 ) : (
-                  chatPlatforms.map((platform) => {
-                    const watchItems = platform.messages.filter(m => m.is_watch_item);
-                    const regularMessages = platform.messages.filter(m => !m.is_watch_item);
-                    
-                    return (
-                      <div key={platform.platform} className="mb-4">
+                  <>
+                    {/* Watch list across ALL platforms */}
+                    {allWatchItems.length > 0 && (
+                      <div className="mb-4">
                         <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
-                          <span>{platform.display_name}</span>
-                          <span className="flex items-center gap-2">
-                            {watchItems.length > 0 && (
-                              <span className="text-amber-600 flex items-center gap-1">
-                                <Eye className="w-3 h-3" /> {watchItems.length}
-                              </span>
-                            )}
-                            {platform.unread_count > 0 && (
-                              <span className="text-primary">{platform.unread_count} unread</span>
-                            )}
-                          </span>
+                          <span>Watch items</span>
+                          <span className="text-muted-foreground">{allWatchItems.length}</span>
                         </p>
-                        {/* Watch items first */}
-                        {watchItems.map(chat => (
-                          <ChatCard 
-                            key={chat.id} 
+                        {allWatchItems.map((chat) => (
+                          <ChatCard
+                            key={chat.id}
                             chat={chat}
                             onIgnore={handleIgnoreChat}
                             onWatch={handleWatchChat}
-                            onReply={handleReplyChat}
-                          />
-                        ))}
-                        {/* Regular messages */}
-                        {regularMessages.map(chat => (
-                          <ChatCard 
-                            key={chat.id} 
-                            chat={chat}
-                            onIgnore={handleIgnoreChat}
-                            onWatch={handleWatchChat}
+                            onUnwatch={handleUnwatchChat}
                             onReply={handleReplyChat}
                           />
                         ))}
                       </div>
-                    );
-                  })
+                    )}
+
+                    {/* Platform lists (excluding watch items) */}
+                    {chatPlatforms
+                      .map((platform) => {
+                        const regularMessages = platform.messages.filter((m) => !m.is_watch_item);
+                        const platformUnread = regularMessages.filter((m) => m.status === "unread").length;
+
+                        if (regularMessages.length === 0) return null;
+
+                        return (
+                          <div key={platform.platform} className="mb-4">
+                            <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
+                              <span>{platform.display_name}</span>
+                              {platformUnread > 0 && <span className="text-primary">{platformUnread} unread</span>}
+                            </p>
+                            {regularMessages.map((chat) => (
+                              <ChatCard
+                                key={chat.id}
+                                chat={chat}
+                                onIgnore={handleIgnoreChat}
+                                onWatch={handleWatchChat}
+                                onUnwatch={handleUnwatchChat}
+                                onReply={handleReplyChat}
+                              />
+                            ))}
+                          </div>
+                        );
+                      })
+                      .filter(Boolean)}
+                  </>
                 )}
               </Section>
 
@@ -482,22 +536,30 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 count={totalEvents}
                 isLoading={loadingCalendar}
                 isExpanded={expandedSections.calendar}
-                onToggle={() => toggleSection('calendar')}
+                onToggle={() => toggleSection("calendar")}
               >
+                <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                  {!calendarCommandOpen ? (
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => setCalendarCommandOpen(true)}>
+                      <Plus className="w-3 h-3 mr-1" /> New calendar command
+                    </Button>
+                  ) : (
+                    <ReplyInput
+                      onSend={handleSendCalendarCommand}
+                      onCancel={() => setCalendarCommandOpen(false)}
+                      placeholder='Try: "Create meeting tomorrow 3pm"'
+                    />
+                  )}
+                </div>
+
                 {calendarAccounts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No events today</p>
                 ) : (
                   calendarAccounts.map((calendar) => (
                     <div key={calendar.calendar_name} className="mb-4">
-                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">
-                        {calendar.calendar_name}
-                      </p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{calendar.calendar_name}</p>
                       {calendar.events.map((event, idx) => (
-                        <CalendarCard 
-                          key={event.id || idx} 
-                          event={event}
-                          onEdit={handleEditCalendar}
-                        />
+                        <CalendarCard key={event.id || idx} event={event} onEdit={handleEditCalendar} />
                       ))}
                     </div>
                   ))
@@ -511,7 +573,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 count={totalTasks}
                 isLoading={loadingTasks}
                 isExpanded={expandedSections.tasks}
-                onToggle={() => toggleSection('tasks')}
+                onToggle={() => toggleSection("tasks")}
               >
                 {taskSections.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No pending tasks</p>
@@ -522,12 +584,8 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                         <span>{section.name}</span>
                         <span>{section.count} tasks</span>
                       </p>
-                      {section.tasks.map(task => (
-                        <TaskCard 
-                          key={task.id} 
-                          task={task}
-                          onComplete={handleCompleteTask}
-                        />
+                      {section.tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} onComplete={handleCompleteTask} />
                       ))}
                     </div>
                   ))

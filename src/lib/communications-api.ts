@@ -175,3 +175,63 @@ export async function resolveWatchItem(messageId: string): Promise<{success: boo
   if (!response.ok) throw new Error('Failed to resolve watch item');
   return response.json();
 }
+
+// Archive email
+export async function archiveEmail(emailId: string): Promise<{success: boolean}> {
+  const response = await fetch(`${BASE_URL}/emails/archive`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ emailId })
+  });
+  if (!response.ok) throw new Error('Failed to archive email');
+  return response.json();
+}
+
+// Reply to email
+export async function replyToEmail(emailId: string, message: string): Promise<{success: boolean}> {
+  const response = await fetch(`${BASE_URL}/emails/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ emailId, message })
+  });
+  if (!response.ok) throw new Error('Failed to send reply');
+  return response.json();
+}
+
+// Reply to chat
+export async function replyToChat(chatId: string, message: string, platform: string): Promise<{success: boolean}> {
+  const response = await fetch(`${BASE_URL}/chats/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chatId, message, platform })
+  });
+  if (!response.ok) throw new Error('Failed to send reply');
+  return response.json();
+}
+
+// Complete task
+export async function completeTask(taskId: string): Promise<{success: boolean}> {
+  const response = await fetch(`${BASE_URL}/tasks/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ taskId })
+  });
+  if (!response.ok) throw new Error('Failed to complete task');
+  return response.json();
+}
+
+// Edit/Delete calendar event with notification
+export async function editCalendarEvent(
+  eventId: string, 
+  action: 'delete' | 'update', 
+  message?: string,
+  updates?: Partial<CalendarEvent>
+): Promise<{success: boolean}> {
+  const response = await fetch(`${BASE_URL}/calendar/edit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId, action, message, updates })
+  });
+  if (!response.ok) throw new Error('Failed to edit calendar event');
+  return response.json();
+}

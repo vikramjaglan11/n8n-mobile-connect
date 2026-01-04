@@ -8,7 +8,8 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { Task } from '@/lib/communications-api';
 
@@ -29,11 +30,12 @@ const priorityColors: Record<string, string> = {
 
 interface Props {
   task: Task;
-  onComplete?: (id: string) => void;
+  onComplete?: (id: string) => Promise<void>;
 }
 
 export function TaskCard({ task, onComplete }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const config = statusConfig[task.status] || statusConfig.pending;
 
   const formatDueDate = (dateStr?: string) => {
@@ -53,6 +55,17 @@ export function TaskCard({ task, onComplete }: Props) {
     const due = new Date(task.due_date);
     const now = new Date();
     return due < now && task.status !== 'completed';
+  };
+
+  const handleComplete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onComplete || isCompleting) return;
+    setIsCompleting(true);
+    try {
+      await onComplete(task.id);
+    } finally {
+      setIsCompleting(false);
+    }
   };
 
   return (
@@ -107,15 +120,21 @@ export function TaskCard({ task, onComplete }: Props) {
               <p className="text-sm text-foreground/80">{task.description}</p>
             )}
 
-            {task.status !== 'completed' && (
+            {task.status !== 'completed' && onComplete && (
               <div className="pt-2" onClick={e => e.stopPropagation()}>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   className="w-full"
-                  onClick={() => onComplete?.(task.id)}
+                  onClick={handleComplete}
+                  disabled={isCompleting}
                 >
-                  <CheckCircle2 className="w-3 h-3 mr-1" /> Mark Complete
+                  {isCompleting ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                  )}
+                  Mark Complete
                 </Button>
               </div>
             )}

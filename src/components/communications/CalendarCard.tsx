@@ -1,22 +1,34 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Calendar,
   Clock,
   MapPin,
   Users,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Edit,
+  Trash2,
+  Loader2,
+  Send,
+  X
 } from 'lucide-react';
 import { CalendarEvent } from '@/lib/communications-api';
 
 interface Props {
   event: CalendarEvent;
+  onEdit?: (eventId: string, action: 'delete' | 'update', message?: string) => Promise<void>;
 }
 
-export function CalendarCard({ event }: Props) {
+export function CalendarCard({ event, onEdit }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const formatTime = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -44,10 +56,34 @@ export function CalendarCard({ event }: Props) {
     return diffMins > 0 && diffMins <= 30;
   };
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(true);
+  };
+
+  const handleDeleteWithMessage = async () => {
+    if (!onEdit || !event.id || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await onEdit(event.id, 'delete', cancelMessage || undefined);
+      setIsDeleting(false);
+      setIsEditing(false);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCancelEdit = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setIsEditing(false);
+    setIsDeleting(false);
+    setCancelMessage('');
+  };
+
   return (
     <Card 
       className={`mb-2 hover:shadow-md transition-shadow cursor-pointer ${isNow() ? 'border-primary' : ''}`}
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={() => !isEditing && setIsExpanded(!isExpanded)}
     >
       <CardContent className="p-3">
         {/* Header */}
@@ -99,7 +135,7 @@ export function CalendarCard({ event }: Props) {
         </div>
 
         {/* Expanded content */}
-        {isExpanded && (
+        {isExpanded && !isEditing && (
           <div className="mt-3 pt-3 border-t border-border space-y-2">
             {event.description && (
               <p className="text-sm text-foreground/80">{event.description}</p>
@@ -116,6 +152,82 @@ export function CalendarCard({ event }: Props) {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="w-3 h-3" />
                 <span>{event.attendees.join(', ')}</span>
+              </div>
+            )}
+
+            {/* Edit button */}
+            {onEdit && event.id && (
+              <div className="pt-2" onClick={e => e.stopPropagation()}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={handleEditClick}
+                >
+                  <Edit className="w-3 h-3 mr-1" /> Edit Event
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Edit mode */}
+        {isEditing && (
+          <div className="mt-3 pt-3 border-t border-border space-y-3" onClick={e => e.stopPropagation()}>
+            {!isDeleting ? (
+              <div className="space-y-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => setIsDeleting(true)}
+                >
+                  <Trash2 className="w-3 h-3 mr-1" /> Delete & Notify Attendees
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={handleCancelEdit}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Send a message to attendees (optional):
+                </p>
+                <Textarea
+                  value={cancelMessage}
+                  onChange={(e) => setCancelMessage(e.target.value)}
+                  placeholder="I'm sorry, I won't be able to make it..."
+                  className="min-h-[60px] text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={handleDeleteWithMessage}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Send className="w-3 h-3 mr-1" />
+                    )}
+                    Delete & Send
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={handleCancelEdit}
+                    disabled={isProcessing}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>

@@ -7,9 +7,6 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  EyeOff,
-  X,
-  Loader2,
 } from "lucide-react";
 import { ChatMessage } from "@/lib/communications-api";
 import { ReplyInput } from "./ReplyInput";
@@ -24,18 +21,12 @@ const platformConfig: Record<string, { icon: string; color: string }> = {
 
 interface Props {
   chat: ChatMessage;
-  onIgnore?: (id: string) => Promise<void>;
-  onWatch?: (id: string) => Promise<void>;
-  onUnwatch?: (id: string) => Promise<void>;
-  onReply?: (id: string, message: string, platform: string) => Promise<void>;
+  onReply?: (id: string, message: string) => Promise<void>;
 }
 
-export function ChatCard({ chat, onIgnore, onWatch, onUnwatch, onReply }: Props) {
+export function ChatCard({ chat, onReply }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
-  const [isIgnoring, setIsIgnoring] = useState(false);
-  const [isWatching, setIsWatching] = useState(false);
-  const [isUnwatching, setIsUnwatching] = useState(false);
 
   const config = platformConfig[chat.platform] || { icon: "💬", color: "bg-muted" };
 
@@ -60,40 +51,7 @@ export function ChatCard({ chat, onIgnore, onWatch, onUnwatch, onReply }: Props)
 
   const handleSendReply = async (message: string) => {
     if (onReply) {
-      await onReply(chat.id, message, chat.platform);
-    }
-  };
-
-  const handleIgnore = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!onIgnore || isIgnoring) return;
-    setIsIgnoring(true);
-    try {
-      await onIgnore(chat.id);
-    } finally {
-      setIsIgnoring(false);
-    }
-  };
-
-  const handleWatch = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!onWatch || isWatching) return;
-    setIsWatching(true);
-    try {
-      await onWatch(chat.id);
-    } finally {
-      setIsWatching(false);
-    }
-  };
-
-  const handleUnwatch = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!onUnwatch || isUnwatching) return;
-    setIsUnwatching(true);
-    try {
-      await onUnwatch(chat.id);
-    } finally {
-      setIsUnwatching(false);
+      await onReply(chat.id, message);
     }
   };
 
@@ -160,30 +118,6 @@ export function ChatCard({ chat, onIgnore, onWatch, onUnwatch, onReply }: Props)
           <div className="flex gap-2 mt-3 pt-3 border-t border-border" onClick={(e) => e.stopPropagation()}>
             <Button variant="outline" size="sm" className="flex-1" onClick={handleReplyClick}>
               <MessageSquare className="w-3 h-3 mr-1" /> Reply
-            </Button>
-
-            {!isWatch ? (
-              <Button variant="ghost" size="sm" onClick={handleWatch} disabled={isWatching}>
-                {isWatching ? (
-                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                ) : (
-                  <Eye className="w-3 h-3 mr-1" />
-                )}
-                Watch
-              </Button>
-            ) : (
-              <Button variant="ghost" size="sm" onClick={handleUnwatch} disabled={isUnwatching}>
-                {isUnwatching ? (
-                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                ) : (
-                  <EyeOff className="w-3 h-3 mr-1" />
-                )}
-                Remove
-              </Button>
-            )}
-
-            <Button variant="ghost" size="sm" onClick={handleIgnore} disabled={isIgnoring}>
-              {isIgnoring ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
             </Button>
           </div>
         )}

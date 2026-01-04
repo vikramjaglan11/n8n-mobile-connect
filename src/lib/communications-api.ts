@@ -1,19 +1,8 @@
 // Communications Inbox API Client
 
-import { supabase } from "@/integrations/supabase/client";
-
 const BASE_URL = "https://vikramjaglan11.app.n8n.cloud/webhook";
 
 type ActionResponse = { success: boolean };
-
-async function invokeAction<T = ActionResponse>(action: string, payload: Record<string, unknown>) {
-  const { data, error } = await supabase.functions.invoke("communications-actions", {
-    body: { action, payload },
-  });
-
-  if (error) throw error;
-  return data as T;
-}
 
 // === EMAIL TYPES ===
 export interface Email {
@@ -75,6 +64,29 @@ export interface ChatsResponse {
   platforms: ChatPlatform[];
   total_messages: number;
   total_unread: number;
+  timestamp: string;
+}
+
+// === WATCH ITEMS TYPES ===
+export interface WatchItem {
+  id: string;
+  sender_name: string;
+  content_preview: string;
+  content: string;
+  received_at: string;
+  platform: string;
+}
+
+export interface WatchItemPlatform {
+  platform_name: string;
+  items: WatchItem[];
+  count: number;
+}
+
+export interface WatchItemsResponse {
+  success: boolean;
+  watch_items: WatchItemPlatform[];
+  total_items: number;
   timestamp: string;
 }
 
@@ -144,6 +156,12 @@ export async function getChats(): Promise<ChatsResponse> {
   return response.json();
 }
 
+export async function getWatchItems(): Promise<WatchItemsResponse> {
+  const response = await fetch(`${BASE_URL}/watch-items`);
+  if (!response.ok) throw new Error("Failed to fetch watch items");
+  return response.json();
+}
+
 export async function getCalendarToday(): Promise<CalendarResponse> {
   const response = await fetch(`${BASE_URL}/calendar/today`);
   if (!response.ok) throw new Error("Failed to fetch calendar");
@@ -156,33 +174,45 @@ export async function getTasks(): Promise<TasksResponse> {
   return response.json();
 }
 
-// === ACTION (POST) FUNCTIONS (proxied through backend function to avoid CORS) ===
-export async function ignoreMessage(messageId: string): Promise<ActionResponse> {
-  return invokeAction<ActionResponse>("communications/ignore", { messageId });
+// === ACTION (POST) FUNCTIONS ===
+export async function archiveEmail(messageId: string): Promise<ActionResponse> {
+  const response = await fetch(`${BASE_URL}/emails/archive`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messageId }),
+  });
+  if (!response.ok) throw new Error("Failed to archive email");
+  return response.json();
 }
 
-export async function addToWatch(messageId: string, reason?: string): Promise<ActionResponse> {
-  return invokeAction<ActionResponse>("communications/watch", { messageId, reason });
+export async function replyToEmail(messageId: string, message: string): Promise<ActionResponse> {
+  const response = await fetch(`${BASE_URL}/emails/reply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messageId, message }),
+  });
+  if (!response.ok) throw new Error("Failed to reply to email");
+  return response.json();
 }
 
-export async function resolveWatchItem(messageId: string): Promise<ActionResponse> {
-  return invokeAction<ActionResponse>("communications/resolve", { messageId });
-}
-
-export async function archiveEmail(emailId: string): Promise<ActionResponse> {
-  return invokeAction<ActionResponse>("emails/archive", { emailId });
-}
-
-export async function replyToEmail(emailId: string, message: string): Promise<ActionResponse> {
-  return invokeAction<ActionResponse>("emails/reply", { emailId, message });
-}
-
-export async function replyToChat(chatId: string, message: string, platform: string): Promise<ActionResponse> {
-  return invokeAction<ActionResponse>("chats/reply", { chatId, message, platform });
+export async function replyToChat(messageId: string, message: string): Promise<ActionResponse> {
+  const response = await fetch(`${BASE_URL}/chats/reply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messageId, message }),
+  });
+  if (!response.ok) throw new Error("Failed to reply to chat");
+  return response.json();
 }
 
 export async function completeTask(taskId: string): Promise<ActionResponse> {
-  return invokeAction<ActionResponse>("tasks/complete", { taskId });
+  const response = await fetch(`${BASE_URL}/tasks/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ taskId }),
+  });
+  if (!response.ok) throw new Error("Failed to complete task");
+  return response.json();
 }
 
 export async function editCalendarEvent(
@@ -191,5 +221,11 @@ export async function editCalendarEvent(
   message?: string,
   updates?: Partial<CalendarEvent>,
 ): Promise<ActionResponse> {
-  return invokeAction<ActionResponse>("calendar/edit", { eventId, action, message, updates });
+  const response = await fetch(`${BASE_URL}/calendar/edit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, action, message, updates }),
+  });
+  if (!response.ok) throw new Error("Failed to edit calendar event");
+  return response.json();
 }

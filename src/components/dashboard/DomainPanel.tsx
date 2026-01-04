@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -12,8 +12,10 @@ import {
   ChevronRight,
   Loader2,
   RefreshCw,
+  MessageSquare,
 } from "lucide-react";
 import { useDomainBriefing } from "@/hooks/useDomainBriefing";
+import { CommunicationsInbox } from "@/components/communications/CommunicationsInbox";
 
 interface BriefingItem {
   text: string;
@@ -25,6 +27,7 @@ interface DomainConfig {
   icon: LucideIcon;
   label: string;
   prompt: string;
+  hasCustomPanel?: boolean;
 }
 
 interface DomainPanelProps {
@@ -36,9 +39,10 @@ interface DomainPanelProps {
 const domainConfigs: DomainConfig[] = [
   {
     id: "communications",
-    icon: Mail,
+    icon: MessageSquare,
     label: "Communications",
     prompt: "Show me messages that need my attention",
+    hasCustomPanel: true,
   },
   {
     id: "calendar",
@@ -90,6 +94,7 @@ function DomainCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const Icon = config.icon;
   const hasUrgent = items.some(b => b.urgent);
+  const isCommunications = config.id === "communications";
 
   return (
     <motion.div
@@ -156,41 +161,47 @@ function DomainCard({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pt-2 pl-14 pr-4 pb-2 space-y-2">
-              {items.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No items to show</p>
-              ) : (
-                items.slice(0, 3).map((item, i) => (
-                  <motion.div
-                    key={i}
-                    className="flex items-start gap-2 text-sm"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                      item.urgent ? "bg-foreground" : "bg-foreground/30"
-                    }`} />
-                    <span className={item.urgent ? "text-foreground font-medium" : "text-muted-foreground"}>
-                      {item.text}
-                    </span>
-                  </motion.div>
-                ))
-              )}
-              
-              {/* Open domain button */}
-              <motion.button
-                className="mt-3 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors flex items-center gap-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelect();
-                }}
-                whileHover={{ x: 4 }}
-              >
-                Open {config.label}
-                <ChevronRight className="w-3 h-3" />
-              </motion.button>
-            </div>
+            {isCommunications ? (
+              <div className="pt-2 pb-2">
+                <CommunicationsInbox />
+              </div>
+            ) : (
+              <div className="pt-2 pl-14 pr-4 pb-2 space-y-2">
+                {items.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No items to show</p>
+                ) : (
+                  items.slice(0, 3).map((item, i) => (
+                    <motion.div
+                      key={i}
+                      className="flex items-start gap-2 text-sm"
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                    >
+                      <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        item.urgent ? "bg-foreground" : "bg-foreground/30"
+                      }`} />
+                      <span className={item.urgent ? "text-foreground font-medium" : "text-muted-foreground"}>
+                        {item.text}
+                      </span>
+                    </motion.div>
+                  ))
+                )}
+                
+                {/* Open domain button */}
+                <motion.button
+                  className="mt-3 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors flex items-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect();
+                  }}
+                  whileHover={{ x: 4 }}
+                >
+                  Open {config.label}
+                  <ChevronRight className="w-3 h-3" />
+                </motion.button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

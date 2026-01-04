@@ -10,10 +10,10 @@ import {
   ChevronUp,
   CheckCircle2
 } from 'lucide-react';
-import { TaskItem } from '@/lib/communications-api';
+import { Task } from '@/lib/communications-api';
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  pending: { icon: <Circle className="w-3 h-3" />, color: 'bg-muted text-muted-foreground', label: 'To Do' },
+  pending: { icon: <Circle className="w-3 h-3" />, color: 'bg-muted text-muted-foreground', label: 'Pending' },
   in_progress: { icon: <Clock className="w-3 h-3" />, color: 'bg-blue-500/20 text-blue-600', label: 'In Progress' },
   blocked: { icon: <Circle className="w-3 h-3" />, color: 'bg-red-500/20 text-red-600', label: 'Blocked' },
   completed: { icon: <CheckCircle2 className="w-3 h-3" />, color: 'bg-green-500/20 text-green-600', label: 'Done' },
@@ -22,12 +22,13 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; label
 const priorityColors: Record<string, string> = {
   urgent: 'bg-red-500 text-white',
   high: 'bg-orange-500 text-white',
+  medium: 'bg-amber-500 text-white',
   normal: 'bg-muted text-muted-foreground',
   low: 'bg-muted text-muted-foreground',
 };
 
 interface Props {
-  task: TaskItem;
+  task: Task;
   onComplete?: (id: string) => void;
 }
 
@@ -71,7 +72,7 @@ export function TaskCard({ task, onComplete }: Props) {
                 <span className={`font-medium text-sm text-foreground truncate ${task.status === 'completed' ? 'line-through opacity-60' : ''}`}>
                   {task.title}
                 </span>
-                {task.priority !== 'normal' && task.priority !== 'low' && (
+                {(task.priority === 'urgent' || task.priority === 'high') && (
                   <Badge className={`text-xs px-1 py-0 ${priorityColors[task.priority]}`}>
                     {task.priority === 'urgent' ? '!!' : '!'}
                   </Badge>
@@ -82,9 +83,6 @@ export function TaskCard({ task, onComplete }: Props) {
                   {config.icon}
                   <span className="ml-1">{config.label}</span>
                 </Badge>
-                {task.project && (
-                  <span className="text-xs text-muted-foreground">{task.project}</span>
-                )}
               </div>
             </div>
           </div>
@@ -107,16 +105,6 @@ export function TaskCard({ task, onComplete }: Props) {
           <div className="mt-3 pt-3 border-t border-border space-y-2">
             {task.description && (
               <p className="text-sm text-foreground/80">{task.description}</p>
-            )}
-            
-            {task.tags && task.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {task.tags.map((tag, i) => (
-                  <Badge key={i} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
             )}
 
             {task.status !== 'completed' && (

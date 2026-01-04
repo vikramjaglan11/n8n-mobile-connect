@@ -16,14 +16,14 @@ import { ChatCard } from "@/components/communications/ChatCard";
 import { CalendarCard } from "@/components/communications/CalendarCard";
 import { TaskCard } from "@/components/communications/TaskCard";
 import {
-  getEmailCards,
-  getChatCards,
-  getCalendarEvents,
-  getPendingTasks,
-  EmailCard as EmailCardType,
-  ChatCard as ChatCardType,
-  CalendarEvent,
-  TaskItem,
+  getEmails,
+  getChats,
+  getCalendarToday,
+  getTasks,
+  EmailAccount,
+  ChatPlatform,
+  CalendarAccount,
+  TaskSection,
   ignoreMessage,
   addToWatch,
 } from "@/lib/communications-api";
@@ -39,13 +39,14 @@ interface SectionProps {
   title: string;
   icon: React.ReactNode;
   count: number;
+  unreadCount?: number;
   isLoading: boolean;
   isExpanded: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }
 
-function Section({ title, icon, count, isLoading, isExpanded, onToggle, children }: SectionProps) {
+function Section({ title, icon, count, unreadCount, isLoading, isExpanded, onToggle, children }: SectionProps) {
   return (
     <div className="border border-border/50 rounded-xl overflow-hidden bg-background">
       <button
@@ -65,9 +66,9 @@ function Section({ title, icon, count, isLoading, isExpanded, onToggle, children
             {isLoading ? "Loading..." : `${count} items`}
           </p>
         </div>
-        {count > 0 && !isLoading && (
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-foreground/10 text-foreground">
-            {count}
+        {unreadCount !== undefined && unreadCount > 0 && !isLoading && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+            {unreadCount} new
           </span>
         )}
         {isExpanded ? (
@@ -107,13 +108,16 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     tasks: false,
   });
 
-  // Data states
-  const [emails, setEmails] = useState<EmailCardType[]>([]);
-  const [emailAccounts, setEmailAccounts] = useState<string[]>([]);
-  const [chats, setChats] = useState<ChatCardType[]>([]);
-  const [chatPlatforms, setChatPlatforms] = useState<string[]>([]);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  // Data states - now storing the grouped response data
+  const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
+  const [totalUnreadEmails, setTotalUnreadEmails] = useState(0);
+  
+  const [chatPlatforms, setChatPlatforms] = useState<ChatPlatform[]>([]);
+  const [totalUnreadChats, setTotalUnreadChats] = useState(0);
+  
+  const [calendarAccounts, setCalendarAccounts] = useState<CalendarAccount[]>([]);
+  
+  const [taskSections, setTaskSections] = useState<TaskSection[]>([]);
 
   // Loading states
   const [loadingEmails, setLoadingEmails] = useState(false);
@@ -130,9 +134,9 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const fetchEmails = async () => {
     setLoadingEmails(true);
     try {
-      const data = await getEmailCards();
-      setEmails(data.cards || []);
+      const data = await getEmails();
       setEmailAccounts(data.accounts || []);
+      setTotalUnreadEmails(data.total_unread || 0);
     } catch (error) {
       console.error('Failed to fetch emails:', error);
     } finally {
@@ -143,9 +147,9 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const fetchChats = async () => {
     setLoadingChats(true);
     try {
-      const data = await getChatCards();
-      setChats(data.cards || []);
+      const data = await getChats();
       setChatPlatforms(data.platforms || []);
+      setTotalUnreadChats(data.total_unread || 0);
     } catch (error) {
       console.error('Failed to fetch chats:', error);
     } finally {
@@ -156,8 +160,8 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const fetchCalendar = async () => {
     setLoadingCalendar(true);
     try {
-      const data = await getCalendarEvents();
-      setEvents(data.events || []);
+      const data = await getCalendarToday();
+      setCalendarAccounts(data.calendars || []);
     } catch (error) {
       console.error('Failed to fetch calendar:', error);
     } finally {
@@ -168,8 +172,8 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const fetchTasks = async () => {
     setLoadingTasks(true);
     try {
-      const data = await getPendingTasks();
-      setTasks(data.tasks || []);
+      const data = await getTasks();
+      setTaskSections(data.sections || []);
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
     } finally {
@@ -192,7 +196,11 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const handleIgnoreChat = async (id: string) => {
     try {
       await ignoreMessage(id);
-      setChats(prev => prev.filter(c => c.id !== id));
+      // Remove the chat from platforms
+      setChatPlatforms(prev => prev.map(platform => ({
+        ...platform,
+        messages: platform.messages.filter(m => m.id !== id)
+      })));
       toast({ title: "Message ignored" });
     } catch {
       toast({ title: "Failed to ignore", variant: "destructive" });
@@ -202,39 +210,24 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const handleWatchChat = async (id: string) => {
     try {
       await addToWatch(id);
-      setChats(prev => prev.map(c => 
-        c.id === id ? { ...c, is_watch_item: true } : c
-      ));
+      // Update the chat in platforms
+      setChatPlatforms(prev => prev.map(platform => ({
+        ...platform,
+        messages: platform.messages.map(m => 
+          m.id === id ? { ...m, is_watch_item: true } : m
+        )
+      })));
       toast({ title: "Added to watch list" });
     } catch {
       toast({ title: "Failed to add to watch", variant: "destructive" });
     }
   };
 
-  // Group functions
-  const emailsByAccount = emailAccounts.length > 0 
-    ? emailAccounts.reduce((acc, account) => {
-        acc[account] = emails.filter(e => e.account === account);
-        return acc;
-      }, {} as Record<string, EmailCardType[]>)
-    : { "All": emails };
-
-  const chatsByPlatform = chatPlatforms.length > 0
-    ? chatPlatforms.reduce((acc, platform) => {
-        acc[platform] = chats.filter(c => c.platform === platform);
-        return acc;
-      }, {} as Record<string, ChatCardType[]>)
-    : chats.reduce((acc, chat) => {
-        if (!acc[chat.platform]) acc[chat.platform] = [];
-        acc[chat.platform].push(chat);
-        return acc;
-      }, {} as Record<string, ChatCardType[]>);
-
-  const tasksByStatus = tasks.reduce((acc, task) => {
-    if (!acc[task.status]) acc[task.status] = [];
-    acc[task.status].push(task);
-    return acc;
-  }, {} as Record<string, TaskItem[]>);
+  // Calculate totals
+  const totalEmails = emailAccounts.reduce((sum, acc) => sum + acc.total, 0);
+  const totalChats = chatPlatforms.reduce((sum, p) => sum + p.total, 0);
+  const totalEvents = calendarAccounts.reduce((sum, c) => sum + c.event_count, 0);
+  const totalTasks = taskSections.reduce((sum, s) => sum + s.count, 0);
 
   const getLastFetchedText = () => {
     if (!lastFetched) return "Never";
@@ -244,7 +237,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     return `${Math.floor(diff / 3600)}h ago`;
   };
 
-  const totalItems = emails.length + chats.length + events.length + tasks.length;
+  const totalItems = totalEmails + totalChats + totalEvents + totalTasks;
   const isLoadingAny = loadingEmails || loadingChats || loadingCalendar || loadingTasks;
 
   return (
@@ -299,53 +292,62 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
               <Section
                 title="Emails"
                 icon={<Mail className="w-5 h-5 text-red-500" />}
-                count={emails.length}
+                count={totalEmails}
+                unreadCount={totalUnreadEmails}
                 isLoading={loadingEmails}
                 isExpanded={expandedSections.emails}
                 onToggle={() => toggleSection('emails')}
               >
-                {Object.entries(emailsByAccount).map(([account, accountEmails]) => (
-                  <div key={account}>
-                    {emailAccounts.length > 0 && (
-                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{account}</p>
-                    )}
-                    {accountEmails.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">No emails</p>
-                    ) : (
-                      accountEmails.map(email => (
+                {emailAccounts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No emails</p>
+                ) : (
+                  emailAccounts.map((account) => (
+                    <div key={account.account_name} className="mb-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
+                        <span>{account.account_name}</span>
+                        {account.unread_count > 0 && (
+                          <span className="text-primary">{account.unread_count} unread</span>
+                        )}
+                      </p>
+                      {account.emails.map(email => (
                         <EmailCard key={email.id} email={email} />
-                      ))
-                    )}
-                  </div>
-                ))}
+                      ))}
+                    </div>
+                  ))
+                )}
               </Section>
 
               {/* Chats Section */}
               <Section
                 title="Chats"
                 icon={<MessageSquare className="w-5 h-5 text-green-500" />}
-                count={chats.length}
+                count={totalChats}
+                unreadCount={totalUnreadChats}
                 isLoading={loadingChats}
                 isExpanded={expandedSections.chats}
                 onToggle={() => toggleSection('chats')}
               >
-                {Object.entries(chatsByPlatform).map(([platform, platformChats]) => (
-                  <div key={platform}>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 px-1 capitalize">
-                      {platform.replace('_', ' ')}
-                    </p>
-                    {platformChats.map(chat => (
-                      <ChatCard 
-                        key={chat.id} 
-                        chat={chat}
-                        onIgnore={handleIgnoreChat}
-                        onWatch={handleWatchChat}
-                      />
-                    ))}
-                  </div>
-                ))}
-                {chats.length === 0 && (
+                {chatPlatforms.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No chats</p>
+                ) : (
+                  chatPlatforms.map((platform) => (
+                    <div key={platform.platform} className="mb-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
+                        <span>{platform.display_name}</span>
+                        {platform.unread_count > 0 && (
+                          <span className="text-primary">{platform.unread_count} unread</span>
+                        )}
+                      </p>
+                      {platform.messages.map(chat => (
+                        <ChatCard 
+                          key={chat.id} 
+                          chat={chat}
+                          onIgnore={handleIgnoreChat}
+                          onWatch={handleWatchChat}
+                        />
+                      ))}
+                    </div>
+                  ))
                 )}
               </Section>
 
@@ -353,16 +355,23 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
               <Section
                 title="Calendar"
                 icon={<Calendar className="w-5 h-5 text-blue-500" />}
-                count={events.length}
+                count={totalEvents}
                 isLoading={loadingCalendar}
                 isExpanded={expandedSections.calendar}
                 onToggle={() => toggleSection('calendar')}
               >
-                {events.length === 0 ? (
+                {calendarAccounts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No events today</p>
                 ) : (
-                  events.map(event => (
-                    <CalendarCard key={event.id} event={event} />
+                  calendarAccounts.map((calendar) => (
+                    <div key={calendar.calendar_name} className="mb-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">
+                        {calendar.calendar_name}
+                      </p>
+                      {calendar.events.map((event, idx) => (
+                        <CalendarCard key={event.id || idx} event={event} />
+                      ))}
+                    </div>
                   ))
                 )}
               </Section>
@@ -371,23 +380,25 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
               <Section
                 title="Tasks"
                 icon={<CheckSquare className="w-5 h-5 text-primary" />}
-                count={tasks.length}
+                count={totalTasks}
                 isLoading={loadingTasks}
                 isExpanded={expandedSections.tasks}
                 onToggle={() => toggleSection('tasks')}
               >
-                {Object.entries(tasksByStatus).map(([status, statusTasks]) => (
-                  <div key={status}>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 px-1 capitalize">
-                      {status.replace('_', ' ')}
-                    </p>
-                    {statusTasks.map(task => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
-                  </div>
-                ))}
-                {tasks.length === 0 && (
+                {taskSections.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No pending tasks</p>
+                ) : (
+                  taskSections.map((section) => (
+                    <div key={section.name} className="mb-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
+                        <span>{section.name}</span>
+                        <span>{section.count} tasks</span>
+                      </p>
+                      {section.tasks.map(task => (
+                        <TaskCard key={task.id} task={task} />
+                      ))}
+                    </div>
+                  ))
                 )}
               </Section>
             </div>

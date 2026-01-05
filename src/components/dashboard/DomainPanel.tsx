@@ -128,7 +128,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
 
   // Data states
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
-  const [totalUnreadEmails, setTotalUnreadEmails] = useState(0);
 
   const [chatPlatforms, setChatPlatforms] = useState<ChatPlatform[]>([]);
   const [watchItemPlatforms, setWatchItemPlatforms] = useState<WatchItemPlatform[]>([]);
@@ -158,7 +157,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     try {
       const data = await getEmails();
       setEmailAccounts(data.accounts || []);
-      setTotalUnreadEmails(data.total_unread || 0);
     } catch (error) {
       console.error("Failed to fetch emails:", error);
     } finally {
@@ -313,6 +311,11 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
 
   // Derived counts
   const totalEmails = useMemo(() => emailAccounts.reduce((sum, acc) => sum + acc.total, 0), [emailAccounts]);
+  const totalUnreadEmails = useMemo(
+    () => emailAccounts.reduce((sum, acc) => sum + acc.unread_count, 0),
+    [emailAccounts],
+  );
+
   const totalChats = useMemo(() => chatPlatforms.reduce((sum, p) => sum + p.total, 0), [chatPlatforms]);
   const totalEvents = useMemo(() => calendarAccounts.reduce((sum, c) => sum + c.event_count, 0), [calendarAccounts]);
   const totalTasks = useMemo(() => taskSections.reduce((sum, s) => sum + s.count, 0), [taskSections]);

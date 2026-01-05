@@ -1,6 +1,6 @@
 // Communications Inbox API Client
 
-const BASE_URL = "https://vikramjaglan11.app.n8n.cloud/webhook";
+import { ENDPOINTS } from "./api-config";
 
 type ActionResponse = { success: boolean };
 
@@ -145,38 +145,38 @@ export interface TasksResponse {
 
 // === READ (GET) FUNCTIONS ===
 export async function getEmails(): Promise<EmailsResponse> {
-  const response = await fetch(`${BASE_URL}/emails/cards`);
+  const response = await fetch(ENDPOINTS.emailsCards);
   if (!response.ok) throw new Error("Failed to fetch emails");
   return response.json();
 }
 
 export async function getChats(): Promise<ChatsResponse> {
-  const response = await fetch(`${BASE_URL}/chats/cards`);
+  const response = await fetch(ENDPOINTS.chatsCards);
   if (!response.ok) throw new Error("Failed to fetch chats");
   return response.json();
 }
 
 export async function getWatchItems(): Promise<WatchItemsResponse> {
-  const response = await fetch(`${BASE_URL}/watch-items`);
+  const response = await fetch(ENDPOINTS.watchItems);
   if (!response.ok) throw new Error("Failed to fetch watch items");
   return response.json();
 }
 
 export async function getCalendarToday(): Promise<CalendarResponse> {
-  const response = await fetch(`${BASE_URL}/calendar/today`);
+  const response = await fetch(ENDPOINTS.calendarToday);
   if (!response.ok) throw new Error("Failed to fetch calendar");
   return response.json();
 }
 
 export async function getTasks(): Promise<TasksResponse> {
-  const response = await fetch(`${BASE_URL}/tasks/pending`);
+  const response = await fetch(ENDPOINTS.tasksPending);
   if (!response.ok) throw new Error("Failed to fetch tasks");
   return response.json();
 }
 
 // === ACTION (POST) FUNCTIONS ===
 export async function archiveEmail(messageId: string): Promise<ActionResponse> {
-  const response = await fetch(`${BASE_URL}/emails/archive`, {
+  const response = await fetch(ENDPOINTS.emailArchive, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messageId }),
@@ -186,7 +186,7 @@ export async function archiveEmail(messageId: string): Promise<ActionResponse> {
 }
 
 export async function replyToEmail(messageId: string, message: string): Promise<ActionResponse> {
-  const response = await fetch(`${BASE_URL}/emails/reply`, {
+  const response = await fetch(ENDPOINTS.emailReply, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messageId, message }),
@@ -196,7 +196,7 @@ export async function replyToEmail(messageId: string, message: string): Promise<
 }
 
 export async function replyToChat(messageId: string, message: string): Promise<ActionResponse> {
-  const response = await fetch(`${BASE_URL}/chats/reply`, {
+  const response = await fetch(ENDPOINTS.chatReply, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messageId, message }),
@@ -206,7 +206,7 @@ export async function replyToChat(messageId: string, message: string): Promise<A
 }
 
 export async function completeTask(taskId: string): Promise<ActionResponse> {
-  const response = await fetch(`${BASE_URL}/tasks/complete`, {
+  const response = await fetch(ENDPOINTS.tasksComplete, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ taskId }),
@@ -221,11 +221,38 @@ export async function editCalendarEvent(
   message?: string,
   updates?: Partial<CalendarEvent>,
 ): Promise<ActionResponse> {
-  const response = await fetch(`${BASE_URL}/calendar/edit`, {
+  const response = await fetch(ENDPOINTS.calendarEdit, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ eventId, action, message, updates }),
   });
   if (!response.ok) throw new Error("Failed to edit calendar event");
+  return response.json();
+}
+
+// === IGNORE & WATCH FUNCTIONS ===
+export async function ignoreItem(
+  itemId: string,
+  itemType: "email" | "chat" | "task"
+): Promise<ActionResponse> {
+  const response = await fetch(ENDPOINTS.commIgnore, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ itemId, itemType }),
+  });
+  if (!response.ok) throw new Error("Failed to ignore item");
+  return response.json();
+}
+
+export async function watchItem(
+  itemId: string,
+  itemType: "email" | "chat" | "task"
+): Promise<ActionResponse> {
+  const response = await fetch(ENDPOINTS.commWatch, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ itemId, itemType }),
+  });
+  if (!response.ok) throw new Error("Failed to add item to watch list");
   return response.json();
 }

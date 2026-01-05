@@ -198,11 +198,15 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     setLoadingCalendar(true);
     try {
       const data = await getCalendarToday();
-      // Only include calendars that have actual events with titles
+      // Only include calendars that have actual events with valid titles
+      // Filter out "(No Title)", "No title", empty strings, etc.
       const calendarsWithEvents = (data.calendars || [])
         .map((c) => ({
           ...c,
-          events: c.events.filter((e) => e.title && e.title.trim() !== "" && e.title !== "No title"),
+          events: c.events.filter((e) => {
+            const title = e.title?.trim().toLowerCase() || "";
+            return title !== "" && title !== "no title" && title !== "(no title)";
+          }),
         }))
         .map((c) => ({ ...c, event_count: c.events.length }))
         .filter((c) => c.events.length > 0);

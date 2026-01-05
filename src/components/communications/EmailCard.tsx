@@ -7,7 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   Reply,
-  Archive,
+  X,
   Loader2
 } from 'lucide-react';
 import { Email } from '@/lib/communications-api';
@@ -15,15 +15,14 @@ import { ReplyInput } from './ReplyInput';
 
 interface Props {
   email: Email;
-  onArchive?: (id: string) => Promise<void>;
+  onIgnore?: (id: string) => void;
   onReply?: (id: string, message: string) => Promise<void>;
   onOpen?: (id: string) => void;
 }
 
-export function EmailCard({ email, onArchive, onReply, onOpen }: Props) {
+export function EmailCard({ email, onIgnore, onReply, onOpen }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
 
   const handleExpand = () => {
     if (!isReplying) {
@@ -48,14 +47,10 @@ export function EmailCard({ email, onArchive, onReply, onOpen }: Props) {
     return `${diffDays}d ago`;
   };
 
-  const handleArchive = async (e: React.MouseEvent) => {
+  const handleIgnore = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!onArchive || isArchiving) return;
-    setIsArchiving(true);
-    try {
-      await onArchive(email.id);
-    } finally {
-      setIsArchiving(false);
+    if (onIgnore) {
+      onIgnore(email.id);
     }
   };
 
@@ -128,15 +123,10 @@ export function EmailCard({ email, onArchive, onReply, onOpen }: Props) {
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={handleArchive}
-              disabled={isArchiving}
+              onClick={handleIgnore}
             >
-              {isArchiving ? (
-                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-              ) : (
-                <Archive className="w-3 h-3 mr-1" />
-              )}
-              Archive
+              <X className="w-3 h-3 mr-1" />
+              Ignore
             </Button>
           </div>
         )}

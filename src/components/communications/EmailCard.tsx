@@ -17,13 +17,23 @@ interface Props {
   email: Email;
   onArchive?: (id: string) => Promise<void>;
   onReply?: (id: string, message: string) => Promise<void>;
+  onOpen?: (id: string) => void;
 }
 
-export function EmailCard({ email, onArchive, onReply }: Props) {
+export function EmailCard({ email, onArchive, onReply, onOpen }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
 
+  const handleExpand = () => {
+    if (!isReplying) {
+      const wasExpanded = isExpanded;
+      setIsExpanded(!isExpanded);
+      if (!wasExpanded && onOpen) {
+        onOpen(email.id);
+      }
+    }
+  };
   const timeAgo = (date: string) => {
     const now = new Date();
     const then = new Date(date);
@@ -63,7 +73,7 @@ export function EmailCard({ email, onArchive, onReply }: Props) {
   return (
     <Card 
       className="mb-2 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => !isReplying && setIsExpanded(!isExpanded)}
+      onClick={handleExpand}
     >
       <CardContent className="p-3">
         {/* Header */}

@@ -22,13 +22,24 @@ const platformConfig: Record<string, { icon: string; color: string }> = {
 interface Props {
   chat: ChatMessage;
   onReply?: (id: string, message: string) => Promise<void>;
+  onOpen?: (id: string) => void;
 }
 
-export function ChatCard({ chat, onReply }: Props) {
+export function ChatCard({ chat, onReply, onOpen }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
 
   const config = platformConfig[chat.platform] || { icon: "💬", color: "bg-muted" };
+
+  const handleExpand = () => {
+    if (!isReplying) {
+      const wasExpanded = isExpanded;
+      setIsExpanded(!isExpanded);
+      if (!wasExpanded && onOpen) {
+        onOpen(chat.id);
+      }
+    }
+  };
 
   const timeAgo = (date: string) => {
     const now = new Date();
@@ -60,7 +71,7 @@ export function ChatCard({ chat, onReply }: Props) {
   return (
     <Card
       className="mb-2 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => !isReplying && setIsExpanded(!isExpanded)}
+      onClick={handleExpand}
     >
       <CardContent className="p-3">
         {/* Header */}

@@ -31,12 +31,21 @@ const priorityColors: Record<string, string> = {
 interface Props {
   task: Task;
   onComplete?: (id: string) => Promise<void>;
+  onOpen?: (id: string) => void;
 }
 
-export function TaskCard({ task, onComplete }: Props) {
+export function TaskCard({ task, onComplete, onOpen }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const config = statusConfig[task.status] || statusConfig.pending;
+
+  const handleExpand = () => {
+    const wasExpanded = isExpanded;
+    setIsExpanded(!isExpanded);
+    if (!wasExpanded && onOpen) {
+      onOpen(task.id);
+    }
+  };
 
   const formatDueDate = (dateStr?: string) => {
     if (!dateStr) return null;
@@ -71,7 +80,7 @@ export function TaskCard({ task, onComplete }: Props) {
   return (
     <Card 
       className={`mb-2 hover:shadow-md transition-shadow cursor-pointer ${isOverdue() ? 'border-red-500/50' : ''}`}
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={handleExpand}
     >
       <CardContent className="p-3">
         {/* Header */}

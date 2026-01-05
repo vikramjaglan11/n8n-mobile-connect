@@ -20,6 +20,7 @@ import { CalendarCard } from "@/components/communications/CalendarCard";
 import { TaskCard } from "@/components/communications/TaskCard";
 import { ReplyInput } from "@/components/communications/ReplyInput";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useAcknowledgedItems } from "@/hooks/useAcknowledgedItems";
 import {
   getEmails,
   getChats,
@@ -117,6 +118,16 @@ function Section({
 
 export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProps) {
   const { toast } = useToast();
+  const {
+    acknowledgeEmail,
+    acknowledgeChat,
+    acknowledgeCalendarEvent,
+    acknowledgeTask,
+    isEmailAcknowledged,
+    isChatAcknowledged,
+    isCalendarAcknowledged,
+    isTaskAcknowledged,
+  } = useAcknowledgedItems();
 
   // Section expansion states
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -309,20 +320,89 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     }
   };
 
-  // Derived counts
-  const totalEmails = useMemo(() => emailAccounts.reduce((sum, acc) => sum + acc.total, 0), [emailAccounts]);
+  // Filter out acknowledged items and compute derived counts
+  const filteredEmailAccounts = useMemo(() => {
+    return emailAccounts
+      .map((account) => ({
+        ...account,
+        emails: account.emails.filter((e) => !isEmailAcknowledged(e.id)),
+      }))
+      .map((account) => ({
+        ...account,
+        total: account.emails.length,
+        unread_count: account.emails.filter((e) => e.status === "unread").length,
+      }))
+      .filter((account) => account.emails.length > 0);
+  }, [emailAccounts, isEmailAcknowledged]);
+
+  const filteredChatPlatforms = useMemo(() => {
+    return chatPlatforms
+      .map((platform) => ({
+        ...platform,
+        messages: platform.messages.filter((m) => !isChatAcknowledged(m.id)),
+      }))
+      .map((platform) => ({
+        ...platform,
+        total: platform.messages.length,
+        unread_count: platform.messages.filter((m) => m.status === "unread").length,
+      }))
+      .filter((platform) => platform.messages.length > 0);
+  }, [chatPlatforms, isChatAcknowledged]);
+
+  const filteredWatchItemPlatforms = useMemo(() => {
+    return watchItemPlatforms
+      .map((platform) => ({
+        ...platform,
+        items: platform.items.filter((item) => !isChatAcknowledged(item.id)),
+      }))
+      .map((platform) => ({
+        ...platform,
+        count: platform.items.length,
+      }))
+      .filter((platform) => platform.items.length > 0);
+  }, [watchItemPlatforms, isChatAcknowledged]);
+
+  const filteredCalendarAccounts = useMemo(() => {
+    return calendarAccounts
+      .map((calendar) => ({
+        ...calendar,
+        events: calendar.events.filter((e) => !e.id || !isCalendarAcknowledged(e.id)),
+      }))
+      .map((calendar) => ({
+        ...calendar,
+        event_count: calendar.events.length,
+      }))
+      .filter((calendar) => calendar.events.length > 0);
+  }, [calendarAccounts, isCalendarAcknowledged]);
+
+  const filteredTaskSections = useMemo(() => {
+    return taskSections
+      .map((section) => ({
+        ...section,
+        tasks: section.tasks.filter((t) => !isTaskAcknowledged(t.id)),
+      }))
+      .map((section) => ({
+        ...section,
+        count: section.tasks.length,
+      }))
+      .filter((section) => section.tasks.length > 0);
+  }, [taskSections, isTaskAcknowledged]);
+
+  // Derived counts from filtered data
+  const totalEmails = useMemo(() => filteredEmailAccounts.reduce((sum, acc) => sum + acc.total, 0), [filteredEmailAccounts]);
   const totalUnreadEmails = useMemo(
-    () => emailAccounts.reduce((sum, acc) => sum + acc.unread_count, 0),
-    [emailAccounts],
+    () => filteredEmailAccounts.reduce((sum, acc) => sum + acc.unread_count, 0),
+    [filteredEmailAccounts],
   );
 
-  const totalChats = useMemo(() => chatPlatforms.reduce((sum, p) => sum + p.total, 0), [chatPlatforms]);
-  const totalEvents = useMemo(() => calendarAccounts.reduce((sum, c) => sum + c.event_count, 0), [calendarAccounts]);
-  const totalTasks = useMemo(() => taskSections.reduce((sum, s) => sum + s.count, 0), [taskSections]);
+  const totalChats = useMemo(() => filteredChatPlatforms.reduce((sum, p) => sum + p.total, 0), [filteredChatPlatforms]);
+  const filteredTotalWatchItems = useMemo(() => filteredWatchItemPlatforms.reduce((sum, p) => sum + p.count, 0), [filteredWatchItemPlatforms]);
+  const totalEvents = useMemo(() => filteredCalendarAccounts.reduce((sum, c) => sum + c.event_count, 0), [filteredCalendarAccounts]);
+  const totalTasks = useMemo(() => filteredTaskSections.reduce((sum, s) => sum + s.count, 0), [filteredTaskSections]);
 
   const totalUnreadChats = useMemo(
-    () => chatPlatforms.reduce((sum, p) => sum + p.unread_count, 0),
-    [chatPlatforms],
+    () => filteredChatPlatforms.reduce((sum, p) => sum + p.unread_count, 0),
+    [filteredChatPlatforms],
   );
 
   const totalItems = totalEmails + totalChats + totalEvents + totalTasks;
@@ -428,17 +508,23 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 isExpanded={expandedSections.emails}
                 onToggle={() => toggleSection("emails")}
               >
-                {emailAccounts.length === 0 ? (
+                {filteredEmailAccounts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No emails</p>
                 ) : (
-                  emailAccounts.map((account) => (
+                  filteredEmailAccounts.map((account) => (
                     <div key={account.account_name} className="mb-4">
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
                         <span>{account.account_name}</span>
                         {account.unread_count > 0 && <span className="text-primary">{account.unread_count} unread</span>}
                       </p>
                       {account.emails.map((email) => (
-                        <EmailCard key={email.id} email={email} onArchive={handleArchiveEmail} onReply={handleReplyEmail} />
+                        <EmailCard 
+                          key={email.id} 
+                          email={email} 
+                          onArchive={handleArchiveEmail} 
+                          onReply={handleReplyEmail}
+                          onOpen={acknowledgeEmail}
+                        />
                       ))}
                     </div>
                   ))
@@ -451,25 +537,25 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 icon={<MessageSquare className="w-5 h-5 text-green-500" />}
                 count={totalChats}
                 unreadCount={totalUnreadChats}
-                watchCount={totalWatchItems}
+                watchCount={filteredTotalWatchItems}
                 isLoading={loadingChats}
                 isExpanded={expandedSections.chats}
                 onToggle={() => toggleSection("chats")}
               >
-                {chatPlatforms.length === 0 && watchItemPlatforms.length === 0 ? (
+                {filteredChatPlatforms.length === 0 && filteredWatchItemPlatforms.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No chats</p>
                 ) : (
                   <>
                     {/* Watch items from dedicated endpoint */}
-                    {watchItemPlatforms.length > 0 && (
+                    {filteredWatchItemPlatforms.length > 0 && (
                       <div className="mb-4">
                         <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
                           <span className="flex items-center gap-1">
                             <Eye className="w-3 h-3" /> Watch items
                           </span>
-                          <span className="text-muted-foreground">{totalWatchItems} watching</span>
+                          <span className="text-muted-foreground">{filteredTotalWatchItems} watching</span>
                         </p>
-                        {watchItemPlatforms.map((platform) => (
+                        {filteredWatchItemPlatforms.map((platform) => (
                           <div key={platform.platform_name} className="mb-2">
                             <p className="text-xs text-muted-foreground/70 mb-1 px-1 capitalize">
                               {platform.platform_name.replace(/_/g, " ")}
@@ -488,6 +574,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                                   is_watch_item: true,
                                 }}
                                 onReply={handleReplyChat}
+                                onOpen={acknowledgeChat}
                               />
                             ))}
                           </div>
@@ -496,23 +583,22 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                     )}
 
                     {/* Platform lists */}
-                    {chatPlatforms
-                      .filter((platform) => platform.messages.length > 0)
-                      .map((platform) => (
-                        <div key={platform.platform} className="mb-4">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
-                            <span>{platform.display_name}</span>
-                            {platform.unread_count > 0 && <span className="text-primary">{platform.unread_count} unread</span>}
-                          </p>
-                          {platform.messages.map((chat) => (
-                            <ChatCard
-                              key={chat.id}
-                              chat={chat}
-                              onReply={handleReplyChat}
-                            />
-                          ))}
-                        </div>
-                      ))}
+                    {filteredChatPlatforms.map((platform) => (
+                      <div key={platform.platform} className="mb-4">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
+                          <span>{platform.display_name}</span>
+                          {platform.unread_count > 0 && <span className="text-primary">{platform.unread_count} unread</span>}
+                        </p>
+                        {platform.messages.map((chat) => (
+                          <ChatCard
+                            key={chat.id}
+                            chat={chat}
+                            onReply={handleReplyChat}
+                            onOpen={acknowledgeChat}
+                          />
+                        ))}
+                      </div>
+                    ))}
                   </>
                 )}
               </Section>
@@ -540,14 +626,19 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                   )}
                 </div>
 
-                {calendarAccounts.length === 0 ? (
+                {filteredCalendarAccounts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No events today</p>
                 ) : (
-                  calendarAccounts.map((calendar) => (
+                  filteredCalendarAccounts.map((calendar) => (
                     <div key={calendar.calendar_name} className="mb-4">
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{calendar.calendar_name}</p>
                       {calendar.events.map((event, idx) => (
-                        <CalendarCard key={event.id || idx} event={event} onEdit={handleEditCalendar} />
+                        <CalendarCard 
+                          key={event.id || idx} 
+                          event={event} 
+                          onEdit={handleEditCalendar}
+                          onOpen={acknowledgeCalendarEvent}
+                        />
                       ))}
                     </div>
                   ))
@@ -563,17 +654,22 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 isExpanded={expandedSections.tasks}
                 onToggle={() => toggleSection("tasks")}
               >
-                {taskSections.length === 0 ? (
+                {filteredTaskSections.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No pending tasks</p>
                 ) : (
-                  taskSections.map((section) => (
+                  filteredTaskSections.map((section) => (
                     <div key={section.name} className="mb-4">
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
                         <span>{section.name}</span>
                         <span>{section.count} tasks</span>
                       </p>
                       {section.tasks.map((task) => (
-                        <TaskCard key={task.id} task={task} onComplete={handleCompleteTask} />
+                        <TaskCard 
+                          key={task.id} 
+                          task={task} 
+                          onComplete={handleCompleteTask}
+                          onOpen={acknowledgeTask}
+                        />
                       ))}
                     </div>
                   ))

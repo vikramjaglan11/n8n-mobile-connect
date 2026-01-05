@@ -21,15 +21,25 @@ import { CalendarEvent } from '@/lib/communications-api';
 interface Props {
   event: CalendarEvent;
   onEdit?: (eventId: string, action: 'delete' | 'update', message?: string) => Promise<void>;
+  onOpen?: (id: string) => void;
 }
 
-export function CalendarCard({ event, onEdit }: Props) {
+export function CalendarCard({ event, onEdit, onOpen }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const handleExpand = () => {
+    if (!isEditing) {
+      const wasExpanded = isExpanded;
+      setIsExpanded(!isExpanded);
+      if (!wasExpanded && onOpen && event.id) {
+        onOpen(event.id);
+      }
+    }
+  };
   const formatTime = (dateStr?: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -83,7 +93,7 @@ export function CalendarCard({ event, onEdit }: Props) {
   return (
     <Card 
       className={`mb-2 hover:shadow-md transition-shadow cursor-pointer ${isNow() ? 'border-primary' : ''}`}
-      onClick={() => !isEditing && setIsExpanded(!isExpanded)}
+      onClick={handleExpand}
     >
       <CardContent className="p-3">
         {/* Header */}

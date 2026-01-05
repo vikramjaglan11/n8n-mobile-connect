@@ -198,7 +198,14 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     setLoadingCalendar(true);
     try {
       const data = await getCalendarToday();
-      const calendarsWithEvents = (data.calendars || []).filter((c) => c.event_count > 0);
+      // Only include calendars that have actual events with titles
+      const calendarsWithEvents = (data.calendars || [])
+        .map((c) => ({
+          ...c,
+          events: c.events.filter((e) => e.title && e.title.trim() !== "" && e.title !== "No title"),
+        }))
+        .map((c) => ({ ...c, event_count: c.events.length }))
+        .filter((c) => c.events.length > 0);
       setCalendarAccounts(calendarsWithEvents);
     } catch (error) {
       console.error("Failed to fetch calendar:", error);
@@ -231,26 +238,22 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   }, [isOpen]);
 
   // Email action handlers
-  const handleArchiveEmail = async (id: string) => {
-    try {
-      await archiveEmail(id);
-      setEmailAccounts((prev) =>
-        prev
-          .map((account) => ({
-            ...account,
-            emails: account.emails.filter((e) => e.id !== id),
-            total: account.total - 1,
-            unread_count:
-              account.emails.find((e) => e.id === id)?.status === "unread"
-                ? account.unread_count - 1
-                : account.unread_count,
-          }))
-          .filter((account) => account.emails.length > 0),
-      );
-      toast({ title: "Email archived" });
-    } catch {
-      toast({ title: "Failed to archive", variant: "destructive" });
-    }
+  const handleIgnoreEmail = (id: string) => {
+    acknowledgeEmail(id);
+    setEmailAccounts((prev) =>
+      prev
+        .map((account) => ({
+          ...account,
+          emails: account.emails.filter((e) => e.id !== id),
+          total: account.total - 1,
+          unread_count:
+            account.emails.find((e) => e.id === id)?.status === "unread"
+              ? account.unread_count - 1
+              : account.unread_count,
+        }))
+        .filter((account) => account.emails.length > 0),
+    );
+    toast({ title: "Ignored" });
   };
 
   const handleReplyEmail = async (id: string, message: string) => {
@@ -610,7 +613,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                         <EmailCard 
                           key={email.id} 
                           email={email} 
-                          onArchive={handleArchiveEmail} 
+                          onIgnore={handleIgnoreEmail} 
                           onReply={handleReplyEmail}
                           onOpen={acknowledgeEmail}
                         />

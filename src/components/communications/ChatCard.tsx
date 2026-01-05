@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  X,
 } from "lucide-react";
 import { ChatMessage } from "@/lib/communications-api";
 import { ReplyInput } from "./ReplyInput";
@@ -22,10 +23,12 @@ const platformConfig: Record<string, { icon: string; color: string }> = {
 interface Props {
   chat: ChatMessage;
   onReply?: (id: string, message: string) => Promise<void>;
+  onIgnore?: (id: string) => void;
+  onWatch?: (chat: ChatMessage) => void;
   onOpen?: (id: string) => void;
 }
 
-export function ChatCard({ chat, onReply, onOpen }: Props) {
+export function ChatCard({ chat, onReply, onIgnore, onWatch, onOpen }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
 
@@ -58,6 +61,16 @@ export function ChatCard({ chat, onReply, onOpen }: Props) {
   const handleReplyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsReplying(true);
+  };
+
+  const handleWatchClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onWatch?.(chat);
+  };
+
+  const handleIgnoreClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onIgnore?.(chat.id);
   };
 
   const handleSendReply = async (message: string) => {
@@ -130,6 +143,16 @@ export function ChatCard({ chat, onReply, onOpen }: Props) {
             <Button variant="outline" size="sm" className="flex-1" onClick={handleReplyClick}>
               <MessageSquare className="w-3 h-3 mr-1" /> Reply
             </Button>
+            {!isWatch && onWatch && (
+              <Button variant="outline" size="sm" className="flex-1" onClick={handleWatchClick}>
+                <Eye className="w-3 h-3 mr-1" /> Watch
+              </Button>
+            )}
+            {onIgnore && (
+              <Button variant="ghost" size="sm" className="flex-1" onClick={handleIgnoreClick}>
+                <X className="w-3 h-3 mr-1" /> Ignore
+              </Button>
+            )}
           </div>
         )}
 

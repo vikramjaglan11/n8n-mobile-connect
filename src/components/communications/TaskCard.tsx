@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   CheckSquare,
   Circle,
   Clock,
   ChevronDown,
   ChevronUp,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Eye,
+  X,
 } from 'lucide-react';
 import { Task } from '@/lib/communications-api';
 
@@ -31,10 +33,12 @@ const priorityColors: Record<string, string> = {
 interface Props {
   task: Task;
   onComplete?: (id: string) => Promise<void>;
+  onIgnore?: (id: string) => void;
+  onWatch?: (task: Task) => void;
   onOpen?: (id: string) => void;
 }
 
-export function TaskCard({ task, onComplete, onOpen }: Props) {
+export function TaskCard({ task, onComplete, onIgnore, onWatch, onOpen }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const config = statusConfig[task.status] || statusConfig.pending;
@@ -75,6 +79,16 @@ export function TaskCard({ task, onComplete, onOpen }: Props) {
     } finally {
       setIsCompleting(false);
     }
+  };
+
+  const handleWatch = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onWatch?.(task);
+  };
+
+  const handleIgnore = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onIgnore?.(task.id);
   };
 
   return (
@@ -127,6 +141,21 @@ export function TaskCard({ task, onComplete, onOpen }: Props) {
           <div className="mt-3 pt-3 border-t border-border space-y-2">
             {task.description && (
               <p className="text-sm text-foreground/80">{task.description}</p>
+            )}
+
+            {(onWatch || onIgnore) && task.status !== 'completed' && (
+              <div className="flex gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+                {onWatch && (
+                  <Button variant="outline" size="sm" className="flex-1" onClick={handleWatch}>
+                    <Eye className="w-3 h-3 mr-1" /> Watch
+                  </Button>
+                )}
+                {onIgnore && (
+                  <Button variant="ghost" size="sm" className="flex-1" onClick={handleIgnore}>
+                    <X className="w-3 h-3 mr-1" /> Ignore
+                  </Button>
+                )}
+              </div>
             )}
 
             {task.status !== 'completed' && onComplete && (

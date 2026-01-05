@@ -11,16 +11,15 @@ import {
   Loader2,
   RefreshCw,
   Eye,
-  Plus,
   ArrowDown,
 } from "lucide-react";
 import { EmailCard } from "@/components/communications/EmailCard";
 import { ChatCard } from "@/components/communications/ChatCard";
 import { CalendarCard } from "@/components/communications/CalendarCard";
 import { TaskCard } from "@/components/communications/TaskCard";
-import { ReplyInput } from "@/components/communications/ReplyInput";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useAcknowledgedItems } from "@/hooks/useAcknowledgedItems";
+import { useWatchItems } from "@/hooks/useWatchItems";
 import {
   getEmails,
   getChats,
@@ -129,6 +128,17 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     isTaskAcknowledged,
   } = useAcknowledgedItems();
 
+  const {
+    watchedChats,
+    watchedTasks,
+    watchChat,
+    unwatchChat,
+    watchTask,
+    unwatchTask,
+    isChatWatched,
+    isTaskWatched,
+  } = useWatchItems();
+
   // Section expansion states
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     emails: false,
@@ -142,14 +152,10 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
 
   const [chatPlatforms, setChatPlatforms] = useState<ChatPlatform[]>([]);
   const [watchItemPlatforms, setWatchItemPlatforms] = useState<WatchItemPlatform[]>([]);
-  const [totalWatchItems, setTotalWatchItems] = useState(0);
 
   const [calendarAccounts, setCalendarAccounts] = useState<CalendarAccount[]>([]);
 
   const [taskSections, setTaskSections] = useState<TaskSection[]>([]);
-
-  // UI states
-  const [calendarCommandOpen, setCalendarCommandOpen] = useState(false);
 
   // Loading states
   const [loadingEmails, setLoadingEmails] = useState(false);
@@ -181,7 +187,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
       const [chatsData, watchData] = await Promise.all([getChats(), getWatchItems()]);
       setChatPlatforms(chatsData.platforms || []);
       setWatchItemPlatforms(watchData.watch_items || []);
-      setTotalWatchItems(watchData.total_items || 0);
     } catch (error) {
       console.error("Failed to fetch chats:", error);
     } finally {
@@ -262,11 +267,42 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   const handleReplyChat = async (id: string, message: string) => {
     try {
       await replyToChat(id, message);
+      // Reply => treated as handled, remove from inbox
+      unwatchChat(id);
+      acknowledgeChat(id);
+      setChatPlatforms((prev) =>
+        prev
+          .map((p) => ({ ...p, messages: p.messages.filter((m) => m.id !== id) }))
+          .filter((p) => p.messages.length > 0),
+      );
+      setWatchItemPlatforms((prev) => prev.map((p) => ({ ...p, items: p.items.filter((i) => i.id !== id) })));
       toast({ title: "Reply sent" });
     } catch {
       toast({ title: "Failed to send reply", variant: "destructive" });
       throw new Error("Failed to send");
     }
+  };
+
+  const handleIgnoreChat = (id: string) => {
+    unwatchChat(id);
+    acknowledgeChat(id);
+    setChatPlatforms((prev) =>
+      prev
+        .map((p) => ({ ...p, messages: p.messages.filter((m) => m.id !== id) }))
+        .filter((p) => p.messages.length > 0),
+    );
+    setWatchItemPlatforms((prev) => prev.map((p) => ({ ...p, items: p.items.filter((i) => i.id !== id) })));
+    toast({ title: "Ignored" });
+  };
+
+  const handleWatchChat = (chat: import("@/lib/communications-api").ChatMessage) => {
+    watchChat(chat);
+    setChatPlatforms((prev) =>
+      prev
+        .map((p) => ({ ...p, messages: p.messages.filter((m) => m.id !== chat.id) }))
+        .filter((p) => p.messages.length > 0),
+    );
+    toast({ title: "Added to watch list" });
   };
 
   // Calendar action handler
@@ -290,16 +326,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     }
   };
 
-  const handleSendCalendarCommand = async (command: string) => {
-    try {
-      onSelectDomain(command);
-      toast({ title: "Command sent" });
-      setCalendarCommandOpen(false);
-    } catch {
-      toast({ title: "Failed to send command", variant: "destructive" });
-      throw new Error("Failed to send");
-    }
-  };
 
   // Task action handler
   const handleCompleteTask = async (id: string) => {
@@ -320,7 +346,28 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     }
   };
 
-  // Filter out acknowledged items and compute derived counts
+  const handleIgnoreTask = (id: string) => {
+    unwatchTask(id);
+    acknowledgeTask(id);
+    setTaskSections((prev) =>
+      prev
+        .map((section) => ({ ...section, tasks: section.tasks.filter((t) => t.id !== id) }))
+        .filter((section) => section.tasks.length > 0),
+    );
+    toast({ title: "Ignored" });
+  };
+
+  const handleWatchTask = (task: import("@/lib/communications-api").Task) => {
+    watchTask(task);
+    setTaskSections((prev) =>
+      prev
+        .map((section) => ({ ...section, tasks: section.tasks.filter((t) => t.id !== task.id) }))
+        .filter((section) => section.tasks.length > 0),
+    );
+    toast({ title: "Added to watch list" });
+  };
+
+  // Filter out acknowledged/watched items and compute derived counts
   const filteredEmailAccounts = useMemo(() => {
     return emailAccounts
       .map((account) => ({
@@ -339,7 +386,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     return chatPlatforms
       .map((platform) => ({
         ...platform,
-        messages: platform.messages.filter((m) => !isChatAcknowledged(m.id)),
+        messages: platform.messages.filter((m) => !isChatAcknowledged(m.id) && !isChatWatched(m.id)),
       }))
       .map((platform) => ({
         ...platform,
@@ -347,7 +394,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
         unread_count: platform.messages.filter((m) => m.status === "unread").length,
       }))
       .filter((platform) => platform.messages.length > 0);
-  }, [chatPlatforms, isChatAcknowledged]);
+  }, [chatPlatforms, isChatAcknowledged, isChatWatched]);
 
   const filteredWatchItemPlatforms = useMemo(() => {
     return watchItemPlatforms
@@ -361,6 +408,39 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
       }))
       .filter((platform) => platform.items.length > 0);
   }, [watchItemPlatforms, isChatAcknowledged]);
+
+  const filteredLocalWatchedChats = useMemo(
+    () => watchedChats.filter((item) => !isChatAcknowledged(item.id)),
+    [watchedChats, isChatAcknowledged],
+  );
+
+  const combinedWatchItemPlatforms = useMemo(() => {
+    const map = new Map<string, { platform_name: string; items: typeof filteredLocalWatchedChats }>();
+
+    const addItems = (platformName: string, items: any[]) => {
+      const existing = map.get(platformName);
+      if (!existing) {
+        map.set(platformName, { platform_name: platformName, items: [...items] });
+        return;
+      }
+      existing.items.push(...items);
+    };
+
+    for (const p of filteredWatchItemPlatforms) {
+      addItems(p.platform_name, p.items as any[]);
+    }
+    for (const item of filteredLocalWatchedChats) {
+      addItems(item.platform, [item] as any[]);
+    }
+
+    return Array.from(map.values())
+      .map((p) => ({
+        platform_name: p.platform_name,
+        items: p.items,
+        count: p.items.length,
+      }))
+      .filter((p) => p.items.length > 0);
+  }, [filteredWatchItemPlatforms, filteredLocalWatchedChats]);
 
   const filteredCalendarAccounts = useMemo(() => {
     return calendarAccounts
@@ -379,14 +459,19 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
     return taskSections
       .map((section) => ({
         ...section,
-        tasks: section.tasks.filter((t) => !isTaskAcknowledged(t.id)),
+        tasks: section.tasks.filter((t) => !isTaskAcknowledged(t.id) && !isTaskWatched(t.id)),
       }))
       .map((section) => ({
         ...section,
         count: section.tasks.length,
       }))
       .filter((section) => section.tasks.length > 0);
-  }, [taskSections, isTaskAcknowledged]);
+  }, [taskSections, isTaskAcknowledged, isTaskWatched]);
+
+  const filteredWatchedTasks = useMemo(
+    () => watchedTasks.filter((t) => !isTaskAcknowledged(t.id)),
+    [watchedTasks, isTaskAcknowledged],
+  );
 
   // Derived counts from filtered data
   const totalEmails = useMemo(() => filteredEmailAccounts.reduce((sum, acc) => sum + acc.total, 0), [filteredEmailAccounts]);
@@ -396,14 +481,18 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
   );
 
   const totalChats = useMemo(() => filteredChatPlatforms.reduce((sum, p) => sum + p.total, 0), [filteredChatPlatforms]);
-  const filteredTotalWatchItems = useMemo(() => filteredWatchItemPlatforms.reduce((sum, p) => sum + p.count, 0), [filteredWatchItemPlatforms]);
-  const totalEvents = useMemo(() => filteredCalendarAccounts.reduce((sum, c) => sum + c.event_count, 0), [filteredCalendarAccounts]);
-  const totalTasks = useMemo(() => filteredTaskSections.reduce((sum, s) => sum + s.count, 0), [filteredTaskSections]);
-
   const totalUnreadChats = useMemo(
     () => filteredChatPlatforms.reduce((sum, p) => sum + p.unread_count, 0),
     [filteredChatPlatforms],
   );
+
+  const totalWatchChats = useMemo(
+    () => combinedWatchItemPlatforms.reduce((sum, p) => sum + p.count, 0),
+    [combinedWatchItemPlatforms],
+  );
+
+  const totalEvents = useMemo(() => filteredCalendarAccounts.reduce((sum, c) => sum + c.event_count, 0), [filteredCalendarAccounts]);
+  const totalTasks = useMemo(() => filteredTaskSections.reduce((sum, s) => sum + s.count, 0), [filteredTaskSections]);
 
   const totalItems = totalEmails + totalChats + totalEvents + totalTasks;
   const isLoadingAny = loadingEmails || loadingChats || loadingCalendar || loadingTasks;
@@ -537,25 +626,25 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 icon={<MessageSquare className="w-5 h-5 text-green-500" />}
                 count={totalChats}
                 unreadCount={totalUnreadChats}
-                watchCount={filteredTotalWatchItems}
+                watchCount={totalWatchChats}
                 isLoading={loadingChats}
                 isExpanded={expandedSections.chats}
                 onToggle={() => toggleSection("chats")}
               >
-                {filteredChatPlatforms.length === 0 && filteredWatchItemPlatforms.length === 0 ? (
+                {filteredChatPlatforms.length === 0 && combinedWatchItemPlatforms.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No chats</p>
                 ) : (
                   <>
-                    {/* Watch items from dedicated endpoint */}
-                    {filteredWatchItemPlatforms.length > 0 && (
+                    {/* Watch items (remote + device-local) */}
+                    {combinedWatchItemPlatforms.length > 0 && (
                       <div className="mb-4">
                         <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
                           <span className="flex items-center gap-1">
                             <Eye className="w-3 h-3" /> Watch items
                           </span>
-                          <span className="text-muted-foreground">{filteredTotalWatchItems} watching</span>
+                          <span className="text-muted-foreground">{totalWatchChats} watching</span>
                         </p>
-                        {filteredWatchItemPlatforms.map((platform) => (
+                        {combinedWatchItemPlatforms.map((platform) => (
                           <div key={platform.platform_name} className="mb-2">
                             <p className="text-xs text-muted-foreground/70 mb-1 px-1 capitalize">
                               {platform.platform_name.replace(/_/g, " ")}
@@ -565,16 +654,16 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                                 key={item.id}
                                 chat={{
                                   id: item.id,
-                                  sender_name: item.sender_name,
-                                  content_preview: item.content_preview,
-                                  content: item.content,
-                                  received_at: item.received_at,
-                                  platform: item.platform,
+                                  sender_name: (item as any).sender_name,
+                                  content_preview: (item as any).content_preview,
+                                  content: (item as any).content,
+                                  received_at: (item as any).received_at,
+                                  platform: (item as any).platform,
                                   status: "watching",
                                   is_watch_item: true,
                                 }}
                                 onReply={handleReplyChat}
-                                onOpen={acknowledgeChat}
+                                onIgnore={handleIgnoreChat}
                               />
                             ))}
                           </div>
@@ -594,7 +683,8 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                             key={chat.id}
                             chat={chat}
                             onReply={handleReplyChat}
-                            onOpen={acknowledgeChat}
+                            onWatch={handleWatchChat}
+                            onIgnore={handleIgnoreChat}
                           />
                         ))}
                       </div>
@@ -612,20 +702,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 isExpanded={expandedSections.calendar}
                 onToggle={() => toggleSection("calendar")}
               >
-                <div className="mb-3" onClick={(e) => e.stopPropagation()}>
-                  {!calendarCommandOpen ? (
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => setCalendarCommandOpen(true)}>
-                      <Plus className="w-3 h-3 mr-1" /> New calendar command
-                    </Button>
-                  ) : (
-                    <ReplyInput
-                      onSend={handleSendCalendarCommand}
-                      onCancel={() => setCalendarCommandOpen(false)}
-                      placeholder='Try: "Create meeting tomorrow 3pm"'
-                    />
-                  )}
-                </div>
-
                 {filteredCalendarAccounts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No events today</p>
                 ) : (
@@ -633,12 +709,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                     <div key={calendar.calendar_name} className="mb-4">
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{calendar.calendar_name}</p>
                       {calendar.events.map((event, idx) => (
-                        <CalendarCard 
-                          key={event.id || idx} 
-                          event={event} 
-                          onEdit={handleEditCalendar}
-                          onOpen={acknowledgeCalendarEvent}
-                        />
+                        <CalendarCard key={event.id || idx} event={event} onEdit={handleEditCalendar} />
                       ))}
                     </div>
                   ))
@@ -654,25 +725,42 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 isExpanded={expandedSections.tasks}
                 onToggle={() => toggleSection("tasks")}
               >
-                {filteredTaskSections.length === 0 ? (
+                {filteredWatchedTasks.length === 0 && filteredTaskSections.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">No pending tasks</p>
                 ) : (
-                  filteredTaskSections.map((section) => (
-                    <div key={section.name} className="mb-4">
-                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
-                        <span>{section.name}</span>
-                        <span>{section.count} tasks</span>
-                      </p>
-                      {section.tasks.map((task) => (
-                        <TaskCard 
-                          key={task.id} 
-                          task={task} 
-                          onComplete={handleCompleteTask}
-                          onOpen={acknowledgeTask}
-                        />
-                      ))}
-                    </div>
-                  ))
+                  <>
+                    {filteredWatchedTasks.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3 h-3" /> Watch items
+                          </span>
+                          <span className="text-muted-foreground">{filteredWatchedTasks.length} watching</span>
+                        </p>
+                        {filteredWatchedTasks.map((task) => (
+                          <TaskCard key={task.id} task={task} onIgnore={handleIgnoreTask} />
+                        ))}
+                      </div>
+                    )}
+
+                    {filteredTaskSections.map((section) => (
+                      <div key={section.name} className="mb-4">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center justify-between">
+                          <span>{section.name}</span>
+                          <span>{section.count} tasks</span>
+                        </p>
+                        {section.tasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            onComplete={handleCompleteTask}
+                            onWatch={handleWatchTask}
+                            onIgnore={handleIgnoreTask}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </>
                 )}
               </Section>
             </div>

@@ -58,6 +58,10 @@ export function ChatCard({ chat, onReply, onIgnore, onWatch, onOpen }: Props) {
     return `${diffDays}d ago`;
   };
 
+  const formatTime = (date: string) => {
+    return new Date(date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
+
   const handleReplyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsReplying(true);
@@ -138,9 +142,24 @@ export function ChatCard({ chat, onReply, onIgnore, onWatch, onOpen }: Props) {
         </div>
 
         {/* Content */}
-        <p className={`text-sm text-foreground/80 ${!isExpanded ? "line-clamp-2" : ""}`}>
-          {isExpanded && chat.content ? chat.content : chat.content_preview}
-        </p>
+        {!isExpanded ? (
+          <p className="text-sm text-foreground/80 line-clamp-2">
+            {chat.content_preview}
+          </p>
+        ) : (
+          <div className="space-y-2 mt-2">
+            {chat.messages && chat.messages.length > 0 ? (
+              chat.messages.map((msg) => (
+                <div key={msg.id} className="flex items-start justify-between gap-2 py-1 border-b border-border/50 last:border-0">
+                  <p className="text-sm text-foreground/80 flex-1">{msg.content}</p>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">{formatTime(msg.received_at)}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-foreground/80">{chat.content_preview}</p>
+            )}
+          </div>
+        )}
 
         {/* Expanded actions */}
         {isExpanded && !isReplying && (

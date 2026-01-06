@@ -549,15 +549,17 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 <button
                   onClick={fetchAll}
                   disabled={isLoadingAny}
-                  className="w-8 h-8 rounded-lg hover:bg-foreground/5 flex items-center justify-center transition-colors disabled:opacity-50"
+                  className="w-10 h-10 rounded-lg hover:bg-foreground/5 flex items-center justify-center transition-colors disabled:opacity-50"
+                  aria-label="Refresh"
                 >
-                  <RefreshCw className={`w-4 h-4 text-muted-foreground ${isLoadingAny ? "animate-spin" : ""}`} />
+                  <RefreshCw className={`w-5 h-5 text-muted-foreground ${isLoadingAny ? "animate-spin" : ""}`} />
                 </button>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-lg hover:bg-foreground/5 flex items-center justify-center transition-colors"
+                  className="w-12 h-12 rounded-lg bg-foreground/10 hover:bg-foreground/20 flex items-center justify-center transition-colors"
+                  aria-label="Close panel"
                 >
-                  <X className="w-5 h-5 text-muted-foreground" />
+                  <X className="w-6 h-6 text-foreground" />
                 </button>
               </div>
             </div>
@@ -619,7 +621,6 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                           email={email} 
                           onIgnore={handleIgnoreEmail} 
                           onReply={handleReplyEmail}
-                          onOpen={acknowledgeEmail}
                         />
                       ))}
                     </div>

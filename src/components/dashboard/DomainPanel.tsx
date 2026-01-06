@@ -50,6 +50,7 @@ interface SectionProps {
   title: string;
   icon: React.ReactNode;
   count: number;
+  countLabel?: string;
   unreadCount?: number;
   watchCount?: number;
   isLoading: boolean;
@@ -62,6 +63,7 @@ function Section({
   title,
   icon,
   count,
+  countLabel = "items",
   unreadCount,
   watchCount,
   isLoading,
@@ -80,7 +82,7 @@ function Section({
         </div>
         <div className="flex-1 text-left">
           <h3 className="font-medium text-foreground">{title}</h3>
-          <p className="text-xs text-muted-foreground">{isLoading ? "Loading..." : `${count} items`}</p>
+          <p className="text-xs text-muted-foreground">{isLoading ? "Loading..." : `${count} ${countLabel}`}</p>
         </div>
         <div className="flex items-center gap-2">
           {watchCount !== undefined && watchCount > 0 && !isLoading && (
@@ -633,6 +635,7 @@ export function DomainPanel({ isOpen, onClose, onSelectDomain }: DomainPanelProp
                 title="Chats"
                 icon={<MessageSquare className="w-5 h-5 text-green-500" />}
                 count={totalChats}
+                countLabel="conversations"
                 unreadCount={totalUnreadChats}
                 watchCount={totalWatchChats}
                 isLoading={loadingChats}

@@ -102,7 +102,15 @@ export function ChatCard({ chat, onReply, onIgnore, onWatch, onOpen }: Props) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-sm text-foreground truncate">{chat.sender_name}</span>
+                <span className="font-medium text-sm text-foreground truncate">
+                  {chat.sender_name}
+                  {chat.message_count && chat.message_count > 1 && (
+                    <span className="text-muted-foreground font-normal ml-1">({chat.message_count})</span>
+                  )}
+                </span>
+                {chat.unread_count && chat.unread_count > 0 && (
+                  <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" title={`${chat.unread_count} unread`} />
+                )}
                 {chat.priority === "high" && (
                   <Badge variant="destructive" className="text-xs px-1 py-0">
                     !
@@ -112,9 +120,6 @@ export function ChatCard({ chat, onReply, onIgnore, onWatch, onOpen }: Props) {
                   <Badge variant="secondary" className="text-xs px-1 py-0">
                     <Eye className="w-2 h-2" />
                   </Badge>
-                )}
-                {chat.status === "unread" && !isWatch && (
-                  <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
               </div>
               <span className="text-xs text-muted-foreground capitalize">

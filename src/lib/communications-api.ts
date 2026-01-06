@@ -49,6 +49,8 @@ export interface ChatMessage {
   awaiting_response?: boolean;
   received_at: string;
   platform: string;
+  message_count?: number;
+  unread_count?: number;
 }
 
 export interface ChatPlatform {
@@ -64,6 +66,7 @@ export interface ChatsResponse {
   platforms: ChatPlatform[];
   total_messages: number;
   total_unread: number;
+  total_conversations?: number;
   timestamp: string;
 }
 

@@ -36,6 +36,13 @@ export interface EmailsResponse {
 }
 
 // === CHAT TYPES ===
+export interface ChatMessageItem {
+  id: string;
+  content: string;
+  received_at: string;
+  status: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender_name: string;
@@ -51,6 +58,7 @@ export interface ChatMessage {
   platform: string;
   message_count?: number;
   unread_count?: number;
+  messages?: ChatMessageItem[];
 }
 
 export interface ChatPlatform {
